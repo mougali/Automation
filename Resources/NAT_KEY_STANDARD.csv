@@ -1,0 +1,4 @@
+STORE_***,*** Retailer_Store_number,1,RTL_POD_NUM,*** POD Number,,,,,,,,
+BASKET_***,*** Retailer_Basket_ID,1,RTL_BSKT_ID,*** Basket ID,,,,,,,,
+HOUSEHOLD_***,*** Retailer_Household_ID,1,RTL_HSHLD_ID,*** Household ID,,,,,,,,
+IDENTIFYING_CARD_***,IDENTIFYING CARD,1,RTL_RYLTY_CRD_ID,*** Card ID,,,,,,,,

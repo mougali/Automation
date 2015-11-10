@@ -1,0 +1,31 @@
+1,SFW,FR10,FR20,1,tlog_validate_file.sh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_validate_file.FR20,1,N,1600,20101014 00:00:00,20221014 00:00:00
+2,SFW,FR20,FR30,1,tlog_group_complete.sh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_group_complete.FR30,1,N,1600,20101014 00:00:00,20221014 00:00:00
+3,SFW,FR30,FR40,1,tlog_check_totalfiles.sh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_check_totalfiles.FR40,1,N,1600,20101014 00:00:00,20221014 00:00:00
+4,SFW,FR40,NS10,2,tlog_nonstd_stg_load.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_nonstd_stg_load.NS10,1,N,1600,20101014 00:00:00,20221014 00:00:00
+5,SFW,NS10,NS20,1,tlog_nonstd_ods_load.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_nonstd_ods_load.NS20,1,N,1600,20101014 00:00:00,20221014 00:00:00
+6,SFW,FR40,CA10,3,tlog_custom_adapter.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_custom_adapter.CA10,1,N,1600,20101014 00:00:00,20221014 00:00:00
+7,SFW,FR40,FS10,1,tlog_merge_file.sh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_merge_file.FS10,1,N,1600,20101014 00:00:00,20221014 00:00:00
+8,SFW,FS10,FS20,1,tlog_file_split.sh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_file_split.FS20,1,N,1600,20101014 00:00:00,20221014 00:00:00
+9,SFW,FS20,FS30,1,tlog_file_adapter.sh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_file_adapter.FS30,1,N,1600,20101014 00:00:00,20221014 00:00:00
+10,SFW,FS30,FS40,1,tlog_calc_rejects.sh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_calc_rejects.FS40,1,N,1600,20101014 00:00:00,20221014 00:00:00
+11,SFW,FS40,FS50,1,tlog_calc_trshld.sh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_calc_trshld.FS50,1,N,1600,20101014 00:00:00,20221014 00:00:00
+12,SFW,FS50,FS60,1,tlog_load_ready_comp_chk.sh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_load_ready_comp_chk.FS60,1,N,1600,20101014 00:00:00,20221014 00:00:00
+13,SFW,FS60,FS70,1,tlog_chk_tot_ready_file.sh ,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_chk_tot_ready_file.FS70,1,N,1600,20101014 00:00:00,20221014 00:00:00
+14,SFW,FS70,FS80,1,tlog_call_stg_load.sh ,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_call_stg_load.FS80,1,N,1600,20101014 00:00:00,20221014 00:00:00
+15,SFW,FS80,FS90,1,tlog_combine_data.sh ,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_combine_data.FS90,1,N,1600,20101014 00:00:00,20221014 00:00:00
+16,SFW,FS90,TR10,1,tlog_ref_rename.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ref_rename.TR10,1,N,1600,20101014 00:00:00,20221014 00:00:00
+17,SFW,NONE,KE10,1,tlog_pull_natrl_keys.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_pull_natrl_keys.KE10,1,N,1600,20101014 00:00:00,20221014 00:00:00
+18,SFW,TR10,KE20,1,tlog_call_cka.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_call_cka.KE20,1,N,1600,20101014 00:00:00,20221014 00:00:00
+19,SFW,NONE,KE30,1,tlog_load_ckr.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_load_ckr.KE30,1,N,1600,20101014 00:00:00,20221014 00:00:00
+20,SFW,KE20,KE40,1,tlog_trnfm_join_ckr.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_trnfm_join_ckr.KE40,1,N,1600,20101014 00:00:00,20221014 00:00:00
+21,SFW,KE20,KE50,2,tlog_bskt_reconcile.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_bskt_reconcile.KE50,1,N,1600,20101014 00:00:00,20221014 00:00:00
+22,SFW,KE40,OD10,1,tlog_ods_wrapper.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ods_wrapper.OD10,1,N,1600,20101014 00:00:00,20221014 00:00:00
+23,SFW,OD10,OD20,1,tlog_ods_val.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ods_val.OD20,1,N,1600,20101014 00:00:00,20221014 00:00:00
+24,SFW,OD20,OD30,1,tlog_ods_history.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ods_history.OD30,1,N,1600,20101014 00:00:00,20221014 00:00:00
+25,SFW,OD30,OD40,1,tlog_ods_restate.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ods_restate.OD40,1,N,1600,20101014 00:00:00,20221014 00:00:00
+26,SFW,OD40,OD50,1,tlog_ods_add.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ods_add.OD50,1,N,1600,20101014 00:00:00,20221014 00:00:00
+27,SFW,OD50,OD60,1,tlog_ods_postval.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ods_postval.OD60,1,N,1600,20101014 00:00:00,20221014 00:00:00
+28,SFW,OD20,RF10,2,tlog_ods_ref_hdr.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ods_ref_hdr.RF10,1,N,1600,20101014 00:00:00,20221014 00:00:00
+29,SFW,RF10,RF20,1,tlog_ods_ref_chr.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ods_ref_chr.RF20,1,N,1600,20101014 00:00:00,20221014 00:00:00
+30,SFW,RF20,RF30,1,tlog_ref_validate.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ref_validate.RF30,1,N,1600,20101014 00:00:00,20221014 00:00:00
+31,SFW,SC10,SC20,1,tlog_ods_create_wrkcopy.ksh,SharedPlatforms.AnswersOnDemandProcessServer.#ENV#.OrchestrationEvent.tlog_ods_create_wrkcopy.SC20,1,N,1600,20101014 00:00:01,20221014 00:00:00
