@@ -56,6 +56,13 @@ subSeedName="TMPL_SUB_DATA_20150914.csv"
 # Other parameters
 geolocation = "US"		# USA is default value
 
+# DIRECTORY VARIABLES
+code_bin="/dsd_2/relr45d/ckaadv/code/bin/"
+code_python="/dsd_2/relr45d/ckaadv/code/python/"
+
+# Shell-scripts
+ckaDataLoad_script=code_bin+"cka_config_data_load.ksh"
+
 # Standard Nat_Key_IDs
 # Sourced directly from TMPL_NAT_KEY_TYP_DATA
 standardNatKeyDict = {
@@ -586,13 +593,19 @@ def main():
 	# ----> Allow creation of new PRODUCT_GLOBAL_SCD
 
 	# SCRIPT TO OUTPUT DATA TO ODS TABLES
-	table = raw_input("Enter table-name for header file >>  ")
-	seedFile = raw_input("Enter seed-file name >> ")
-	seedFileLoc = os.getcwd()+"/GKA/"+seedFile
+	# THIS IS NOT NEEDED
+	# WILL TRIGGER cka_config_data_load.ksh instead
+	# table = raw_input("Enter table-name for header file >>  ")
+	# seedFile = raw_input("Enter seed-file name >> ")
+	# seedFileLoc = os.getcwd()+"/GKA/"+seedFile
 
-	query = createGkaQuery(table, seedFileLoc)
-	print query + "\n\n"
+	# query = createGkaQuery(table, seedFileLoc)
+	# print query + "\n\n"
 	# runSqlQuery(query, connectionString)
+
+	# Trigger cka_config_data_load.ksh to output to CKA DB
+	subprocess.call(["."+ckaDataLoad_script,processDate])
+
 
 if __name__ == '__main__':
 	main()
