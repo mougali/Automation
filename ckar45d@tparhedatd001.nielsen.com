@@ -6,7 +6,6 @@ import subprocess
 import csv
 
 from collections import deque
-from subprocess import Popen, PIPE
 
 ## Loads all data (seed-files) needed for automating the configuration process.
 
@@ -588,7 +587,7 @@ def main():
 	# SCRIPT TO OUTPUT DATA TO ODS TABLES
 	table = raw_input("Enter table-name for header file >>  ")
 	seedFile = raw_input("Enter seed-file name >> ")
-	seedFileLoc = os.getcwd()+"/GKA/"+seedFile
+	seedFileLoc = os.getcwd()+"/Configuration Seed Files/GKA/"+seedFile
 
 	query = createGkaQuery(table, seedFileLoc)
 	print query + "\n\n"
