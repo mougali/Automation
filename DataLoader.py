@@ -21,7 +21,9 @@ SUB_ID = 55
 pre_ods=os.getcwd()+"/ODS/"
 pre_gka=os.getcwd()+"/GKA/"
 processDate="20150914"
-processDate_text="14sep2015"
+processDate_text="11sep2015"
+newProcessDate="20151111"
+newProcessDate_text="11nov2015"
 suffix=".csv"
 
 # Standards files (.csv's enlisting default/required data for each seed-file)
@@ -31,6 +33,10 @@ natKeyStandardsFile = os.getcwd()+"/Resources/NAT_KEY_STANDARD.csv"
 subDimNatStandardsFile = os.getcwd()+"/Resources/SUB_DIM_NAT_STANDARD.csv"
 subDimNatStandardsFile_New = ""
 natKeyStandardsFile_SCD = os.getcwd()+"/Resources/NAT_KEY_SCD_STANDARD.csv"
+
+# Temporary standards files (needed to modify data values for each new run)
+temp_natKeyStandardsFile = os.getcwd()+"/TempProcessing/NAT_KEY_STANDARD_"+newProcessDate+".csv"
+temp_subDimNatStandardsFile = os.getcwd()+"/TempProcessing/SUB_DIM_NAT_STANDARD_"+newProcessDate+".csv"
 
 # Login information for databases and environments
 # To-Do: ROUTE PASSWORD INPUT THROUGH ODconfig
@@ -59,6 +65,7 @@ geolocation = "US"		# USA is default value
 # DIRECTORY VARIABLES
 code_bin="/dsd_2/relr45d/ckaadv/code/bin/"
 code_python="/dsd_2/relr45d/ckaadv/code/python/"
+destination_GKAseedFile="/dsd_2/relr45d/ckaadv/data/inputs/config/"
 
 # Shell-scripts
 ckaDataLoad_script=code_bin+"cka_config_data_load.ksh"
@@ -126,17 +133,29 @@ gkaFiles = list()
 # Store locations of temp-files in ods and gka lists.
 for seedfile in odSeedfileLocations:
 	seedfileName=seedfile.split('/')[-1]
+
+	# Modify name to describe new processing date
+	seedfileName = seedfileName.replace(processDate, newProcessDate)
 	shutil.copy2(seedfile, path+seedfileName)
+
 	# Unsafe to keep files open
 	# odsFiles.append(open(path+seedfileName))
 	odsFiles.append(path+seedfileName)
 
 for seedfile in gkaSeedfileLocations:
 	seedfileName=seedfile.split('/')[-1]
+
+	# Modify name to describe new processing date
+	seedfileName = seedfileName.replace(processDate, newProcessDate)
 	shutil.copy2(seedfile, path+seedfileName)
+
 	# Unsafe programming practice to keep files open
 	# gkaFiles.append(open(path+seedfileName))
 	gkaFiles.append(path+seedfileName)
+
+# Generate temporary duplicates of standards-files
+shutil.copy2(natKeyStandardsFile, temp_natKeyStandardsFile)
+shutil.copy2(subDimNatStandardsFile, temp_subDimNatStandardsFile)
 
 # Be sure to delete path at the end of program processing
 def closeDeleteFiles(filesArr):
@@ -216,7 +235,7 @@ def add_sub_dim_nat_data(subDimNatDataFile, standardsFile):
 # Adds default natural key types (Store, Basket, Household, ID_CARD)
 # @param natKeyDataFile - Seed-file containing Natural Key Type data 
 # @param standardsFile - Standards File which contains default entry values for seed-file specified by natKeyDataFile
-# Return Last NAT_KEY_TYP_ID + 1. Specifies starting point for new ID creation.
+# Return Last NAT_KEY_TYP_ID + 1 (from original file; before adding new records). Specifies starting point for new ID creation.
 def add_default_nat_key_data(natKeyDataFile, standardsFile):
 
 	stdFile = open(standardsFile,'rb')
@@ -249,7 +268,8 @@ def add_default_nat_key_data(natKeyDataFile, standardsFile):
 
 # Update the standards file used to complete TMPL_SUB_DIM_NAT_... 
 # Specifically, updates the NAT_ID values for newly created natural key records in TMPL_NAT_DATA
-def update_sub_dim_nat_standards(standardsFile, start_NAT_ID):
+# Default value for Product NAT_KEY has been set to 40 (representing a US client).
+def update_sub_dim_nat_standards(standardsFile, start_NAT_ID, product_NAT_ID=40):
 
 	stdFile = open(standardsFile,'rU')
 
@@ -262,11 +282,17 @@ def update_sub_dim_nat_standards(standardsFile, start_NAT_ID):
 	current_id = start_NAT_ID
 
 	for row in reader:
-		if row[2] == "VARIABLE":
+		if row[0] == "PROMOTION":
+			writer.writerow([row[0],row[1],standardNatKeyDict["PROMOTION_LOY"],row[3],row[4]])
+		elif row[0] == "PROMODETAIL":
+			writer.writerow([row[0],row[1],standardNatKeyDict["PROMODETAIL_LOY"],row[3],row[4]])
+		elif row[0] == "PRODUCT":
+			writer.writerow([row[0],row[1],product_NAT_ID,row[3],row[4]])
+		elif row[0] == "PERIOD":
+			writer.writerow([row[0],row[1],standardNatKeyDict["PERIOD_SECOND_GLOBAL"],row[3],row[4]])	
+		elif row[2] == "VARIABLE":
 			writer.writerow([row[0],row[1],current_id,row[3],row[4]])
 			current_id += 1
-		else:
-			writer.writerow([row[0],row[1],row[2],row[3],row[4]])
 
 	stdFile.close()
 	outFile.close()
@@ -274,34 +300,10 @@ def update_sub_dim_nat_standards(standardsFile, start_NAT_ID):
 	shutil.copy2(tmpFile, standardsFile)
 	os.remove(tmpFile)
 
-# Update PRODUCT dimension Nat_Key in standards file.
-def update_sub_dim_nat_standards_product(standardsFile, product_NAT_ID):
-
-	stdFile = open(standardsFile, 'rU')
-
-	tmpFileName = os.getcwd()+"/Resources/SUB_DIM_NAT_STANDARD_NEW.csv"
-	outFile = open(tmpFileName,'wb')
-
-	reader = csv.reader(stdFile,delimiter=',')
-	writer = csv.writer(outFile,quoting=csv.QUOTE_NONE,escapechar='\n',lineterminator='\n')
-
-	for row in reader:
-		tempRow = row
-		if row[0] == "PRODUCT":
-			tempRow[2] = product_NAT_ID
-		writer.writerow(tempRow)
-
-	stdFile.close()
-	outFile.close()
-
-	# Set Global Standards File variable to new tmp file
-	global subDimNatStandardsFile_New
-	subDimNatStandardsFile_New = tmpFileName
-
 # Adds default dimension and nat-key values to TMPL_SUB_DIM_NAT_KEY_TYP_DATA
 # (PROD, PER, STORE, BAS, HHOLD, ID_CARD)
 # Record Format: SUB_ID | DIM_ID | NAT_KEY_ID | Y | N
-def add_default_sub_dim_nat_data(subDimNatDataFile, standardsFile, geolocation):
+def add_default_sub_dim_nat_data(subDimNatDataFile, standardsFile, geolocation=None, prodNatKey=None):
 
 	stdFile = open(standardsFile, 'rb')
 	outFile = open(subDimNatDataFile, 'a')
@@ -317,6 +319,13 @@ def add_default_sub_dim_nat_data(subDimNatDataFile, standardsFile, geolocation):
 				writer.writerow([SUB_ID,row[1],standardNatKeyDict["PROD_EU"],row[3],row[4]])
 			elif geolocation == "US":
 				writer.writerow([SUB_ID,row[1],standardNatKeyDict["PROD_US"],row[3],row[4]])
+			elif (geolocation == None and prodNatKey != None):
+				writer.writerow([SUB_ID,row[1],prodNatKey,row[3],row[4]])
+			else:
+				# THROW EXCEPTION HERE
+				print "ERROR:\t\tadd_default_sub_dim_nat_data()\t\tneed geolocation OR prodNatKey"
+		elif row[0] == "PERIOD":
+			writer.writerow([SUB_ID,row[1],standardNatKeyDict["PERIOD_SECOND_GLOBAL"],row[3],row[4]])
 		elif row[0] != "PROMOTION" and row[0] != "PROMODETAIL":
 			writer.writerow([SUB_ID,row[1],row[2],row[3],row[4]])
 
@@ -329,7 +338,7 @@ def add_default_sub_dim_nat_data(subDimNatDataFile, standardsFile, geolocation):
 # @param promodetail Boolean specifying whether PROMODETAIL dimension should be added.
 # @param subDimNataDataFile String containing location of seedfile TMPL_SUB_DIM_NAT_KEY_DATA.csv
 # @param subDimNatStandardsFile String containing location of standards file SUB_DIM_NAT_STANDARDS.csv
-def add_opt_dimensions(promo, promodetail, subDimNatDataFile, subDimNatStandardsFile,):
+def add_opt_dimensions(promo, promodetail, subDimNatDataFile, subDimNatStandardsFile):
 	
 	stdFile = open(subDimNatStandardsFile, 'rb')
 	outFile = open(subDimNatDataFile, 'a')
@@ -357,7 +366,7 @@ def add_opt_dimensions(promo, promodetail, subDimNatDataFile, subDimNatStandards
 # @param natKeyDataFile Points to TMPL_NAT_KEY_DATA seedfile, adds new PRODUCT_GLOBAL_SCD here
 # @param standardsFile Contains PRODUCT_GLOBAL_SCD key data (points to NAT_KEY_STANDARDS_PRODUCT.csv)
 # @param new_nat_id Integer value of new Natural Key ID to be assigned to the new PRODUCT nat-key.
-def update_period_nat_key(natKeyDataFile, standardsFile, new_nat_id):
+def update_product_nat_key(natKeyDataFile, standardsFile, new_nat_id):
 
 	stdFile = open(standardsFile, 'rb')
 	outFile = open(natKeyDataFile, 'a')
@@ -383,28 +392,6 @@ def get_last_row(csv_filename):
 	# Python >= 2.7 only
 	# with open(csv_filename, 'rb') as f:
 	# 	return deque(csv.reader(f), 1)[0]
-
-# Form connection with GKA database
-# @param user
-# @param password
-# @param hostname
-# def connect_to_GKA(user, password, hostname):
-
-# Form connection with GKA database
-# @param user
-# @param password
-# @param hostname
-# def connect_to_ODconfig(user, password, hostname):
-
-# Output to GKA
-# def write_to_GKA():
-	# Connect to GKA database using sql*plus
-	# connect_to_DB(userGKA, passwordGKA, sidGKA)
-
-	# Once in sql*plus, issue SQL commands for backing up and writing
-
-	# Exit sql*plus environment
-	# disconnect_from_DB()
 
 # Generate SQL file for GKA database
 # @param tableName
@@ -439,19 +426,8 @@ def getColNames(tableName):
 	# stdout, stderror = session.communicate()
 	return session.communicate()
 
-
-
-# Connect to database via SQL*PLUS
-def connect_to_DB(user, password, SID):
-	arg=user + "/" + password + "@" + SID
-	subprocess.call(["sqlplus","-S",arg])
-
-# Disconnect from DB and SQL*PLUS environment
-def disconnect_from_DB():
-	stmnt="exit;"
-	# How to call exit?
-
 # Backup tables in GKA databse
+# DOES cka_config_data_load.ksh backup tables?
 def backup_tables_GKA():
 	# NEEDS MODIFICATION (results in error in interpreter)
 	sql_query="create table sub_bkp_"+processDate_text+" as select * from sub;create table nat_key_typ_bkp_"+processDate_text+" as select * from nat_key_typ;create table dim_bkp_"+processDate_text+" as select * from dim;create table sub_dim_nat_key_typ_"+processDate_text+" as select * from sub_dim_nat_key_typ;"
@@ -526,24 +502,30 @@ def getColNames(tableName):
 	# stdout, stderror = session.communicate()
 	return queryResult
 
-#function that takes the sqlCommand and connectString and returns the queryResult and errorMessage (if any)
+# Function that takes the sqlCommand and connectString and returns the queryResult and errorMessage (if any)
 # CREDIT: https://moizmuhammad.wordpress.com/2012/01/31/run-oracle-commands-from-python-via-sql-plus/
 def runSqlQuery(sqlCommand, connectString):
    session = Popen(['sqlplus', '-S', connectString], stdin=PIPE, stdout=PIPE, stderr=PIPE)
    session.stdin.write(sqlCommand)
    return session.communicate()
 
+# Send GKA-files from TempProcessing/ to default storage folder.
+# Files are accessed by cka_config_data_load.ksh here for formulation of SQL Insert queries.
+# @param storageDir - Directory to which seed-files are pushed.
+def pushGkaSeedData(storageDir):
 
+	for row in gkaFiles:
+		subprocess.call(["mv",row,storageDir])
+
+
+# MAIN SCRIPT
+# Currently able to write out standard/default values for SUBSCRIBER, OBJECT_GROUPS, and SUBJECT_AREAS
+# ADDENDUM 10/26/15: Also writing out default values for TMPL_NAT_KEY_DATA, TMPL_SUB_DIM_NAT_KEY_DATA
 def main():
-	# MAIN SCRIPT
-	# Currently able to write out standard/default values for SUBSCRIBER, OBJECT_GROUPS, and SUBJECT_AREAS
-	# ADDENDUM 10/26/15: Also writing out default values for TMPL_NAT_KEY_DATA, TMPL_SUB_DIM_NAT_KEY_DATA
+
 	add_sub_data(gkaFiles[2])
 	add_obj_grp_data(odsFiles[2],objGrpStandardsFile)
 	add_sbj_area_data(odsFiles[5],sbjAreaStandardsFile)
-
-	natkeyID = add_default_nat_key_data(gkaFiles[1],natKeyStandardsFile)
-	update_sub_dim_nat_standards(subDimNatStandardsFile,natkeyID)
 
 	# Prompt user if they want to create new PRODUCT_GLOBAL_SCD
 	# If yes, generate/update new product NAT_KEY_TYP in:
@@ -552,28 +534,29 @@ def main():
 
 	# Prompt user for client geographical location (impacts NAT_KEY_ID of PROD dimension)
 	geolocation = raw_input("Enter client geographical continent (\"EU\" or \"US\") >> ")
-		
+	
+	# Modify temporary standards files to prepare entries for seed-files.	
+	# If NO new Product / Period key created, use original Sub-Dim-Nat Standards File
+	# Else, use newly created Standards File	
+	natkeyID = add_default_nat_key_data(gkaFiles[1],natKeyStandardsFile)		
 	if (productKeyBranch == "Y"):
 		# Retrieve last used ID from TMPL_NAT_KEY and use to generate newest Nat_Key_ID
 		newNatID = int(get_last_row(gkaFiles[1])[0]) + 1
-		update_period_nat_key(gkaFiles[1],natKeyStandardsFile_SCD,newNatID)
-		update_sub_dim_nat_standards_product(subDimNatStandardsFile,newNatID)
-
-	# If NO new Product / Period key created, use original Sub-Dim-Nat Standards File
-	# Else, use newly created Standards File
-	if (subDimNatStandardsFile_New == ""):
-		add_default_sub_dim_nat_data(gkaFiles[3],subDimNatStandardsFile, geolocation)
-	else: 
-		add_default_sub_dim_nat_data(gkaFiles[3],subDimNatStandardsFile_New)
+		update_product_nat_key(gkaFiles[1],natKeyStandardsFile_SCD,newNatID)
+		update_sub_dim_nat_standards(temp_subDimNatStandardsFile,natkeyID,newNatID)
+		add_default_sub_dim_nat_data(gkaFiles[3],temp_subDimNatStandardsFile, prodNatKey=newNatID)
+	else:
+		update_sub_dim_nat_standards(temp_subDimNatStandardsFile,natkeyID)
+		add_default_sub_dim_nat_data(gkaFiles[3],temp_subDimNatStandardsFile, geolocation=geolocation)
 
 	optDimensions = raw_input("Enter \"PROMO\" or \"PROMODETAIL\" or \"BOTH\" or \"NONE\": ")
 
 	if optDimensions == "PROMO":
-		add_opt_dimensions(True,False,gkaFiles[3],subDimNatStandardsFile)
+		add_opt_dimensions(True,False,gkaFiles[3],temp_subDimNatStandardsFile)
 	elif optDimensions == "PROMODETAIL":
-		add_opt_dimensions(False,True,gkaFiles[3],subDimNatStandardsFile)
+		add_opt_dimensions(False,True,gkaFiles[3],temp_subDimNatStandardsFile)
 	elif optDimensions == "BOTH":
-		add_opt_dimensions(True,True,gkaFiles[3],subDimNatStandardsFile)
+		add_opt_dimensions(True,True,gkaFiles[3],temp_subDimNatStandardsFile)
 
 	# objGrpScriptPath = os.getcwd()+"/ODS/objGroupFiller.sh"
 	# # Change file permission to "Execute by Owner"
@@ -585,27 +568,11 @@ def main():
 	# closeDeleteFiles(gkaFiles)
 	# os.rmdir(path)
 
-	## Steps to append to TMPL_NAT_KEY_DATA
-	# 1. Find ID of last entered record. start_id = last_ID + 1
-	# 2. Use standards file to append new default nat_keys. Keep updating currentID
-	# 3. Later modules: allow optional nat_keys
-	# ----> PROMO and PROMODETAIL are included dimensions?
-	# ----> Allow creation of new PRODUCT_GLOBAL_SCD
-
-	# SCRIPT TO OUTPUT DATA TO ODS TABLES
-	# THIS IS NOT NEEDED
-	# WILL TRIGGER cka_config_data_load.ksh instead
-	# table = raw_input("Enter table-name for header file >>  ")
-	# seedFile = raw_input("Enter seed-file name >> ")
-	# seedFileLoc = os.getcwd()+"/GKA/"+seedFile
-
-	# query = createGkaQuery(table, seedFileLoc)
-	# print query + "\n\n"
-	# runSqlQuery(query, connectionString)
-
 	# Trigger cka_config_data_load.ksh to output to CKA DB
-	subprocess.call(["."+ckaDataLoad_script,processDate])
+	# subprocess.call(["."+ckaDataLoad_script,processDate])
 
+	# Only works in dev-environment
+	pushGkaSeedData(destination_GKAseedFile)
 
 if __name__ == '__main__':
 	main()
