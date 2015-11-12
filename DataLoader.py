@@ -22,8 +22,8 @@ pre_ods=os.getcwd()+"/ODS/"
 pre_gka=os.getcwd()+"/GKA/"
 processDate="20150914"
 processDate_text="11sep2015"
-newProcessDate="20151111"
-newProcessDate_text="11nov2015"
+newProcessDate="20151112"
+newProcessDate_text="12nov2015"
 suffix=".csv"
 
 # Standards files (.csv's enlisting default/required data for each seed-file)
@@ -31,7 +31,6 @@ objGrpStandardsFile = os.getcwd()+"/Resources/OBJ_GRP_STANDARD.csv"
 sbjAreaStandardsFile = os.getcwd()+"/Resources/SBJ_AREA_STANDARD.csv"
 natKeyStandardsFile = os.getcwd()+"/Resources/NAT_KEY_STANDARD.csv"
 subDimNatStandardsFile = os.getcwd()+"/Resources/SUB_DIM_NAT_STANDARD.csv"
-subDimNatStandardsFile_New = ""
 natKeyStandardsFile_SCD = os.getcwd()+"/Resources/NAT_KEY_SCD_STANDARD.csv"
 
 # Temporary standards files (needed to modify data values for each new run)
@@ -63,12 +62,16 @@ subSeedName="TMPL_SUB_DATA_20150914.csv"
 geolocation = "US"		# USA is default value
 
 # DIRECTORY VARIABLES
-code_bin="/dsd_2/relr45d/ckaadv/code/bin/"
-code_python="/dsd_2/relr45d/ckaadv/code/python/"
-destination_GKAseedFile="/dsd_2/relr45d/ckaadv/data/inputs/config/"
+CKA_CODEBASE_KSH="/dsd_2/relr45d/ckaadv/code/bin/"
+CKA_CODEBASE_PYTHON="/dsd_2/relr45d/ckaadv/code/python/"
+GKA_INPUT_DEST="/dsd_2/relr45d/ckaadv/data/inputs/config/"
+
+ODS_CODEBASE_KSH="/dsd_2/relr45d/tlog/code/bin/"
+ODS_INPUT_DEST="/dsd_2/relr45d/tlog/data/inputs/config/"
 
 # Shell-scripts
-ckaDataLoad_script=code_bin+"cka_config_data_load.ksh"
+ckaDataLoad_script=CKA_CODEBASE_KSH+"cka_config_data_load.ksh"
+odsDataLoad_script=ODS_CODEBASE_KSH+"tlog_config_data_load_v2.ksh"
 
 # Standard Nat_Key_IDs
 # Sourced directly from TMPL_NAT_KEY_TYP_DATA
@@ -97,7 +100,11 @@ odSeedfileLocations =  [pre_ods + "TMPL_CUST_ADAPT_" + processDate + suffix,
 						pre_ods + "TMPL_OBJ_GRP_DATA_" + processDate + suffix,
 						pre_ods + "TMPL_OBJ_PRCS_EXCPN_" + processDate + suffix,
 						pre_ods + "TMPL_PRCS_CFG_" + processDate + suffix,
-						pre_ods + "TMPL_SBJ_AREA_DATA_" + processDate + suffix]
+						pre_ods + "TMPL_SBJ_AREA_DATA_" + processDate + suffix,
+						pre_ods + "TMPL_SUB_DIM_KEY_DATA_" + processDate + suffix,
+						pre_ods + "TMPL_STD_FMT_META_DATA_" + processDate + suffix,
+						pre_ods + "TMPL_SRVC_ORCH_DATA_" + processDate + suffix,
+						pre_ods + "TMPL_DIM_DATA_" + processDate + suffix]
 
 gkaSeedfileLocations = [pre_gka + "TMPL_DIM_DATA_" + processDate + suffix,
 						pre_gka + "TMPL_NAT_KEY_TYP_DATA_" + processDate + suffix,
@@ -511,11 +518,19 @@ def runSqlQuery(sqlCommand, connectString):
 
 # Send GKA-files from TempProcessing/ to default storage folder.
 # Files are accessed by cka_config_data_load.ksh here for formulation of SQL Insert queries.
-# @param storageDir - Directory to which seed-files are pushed.
-def pushGkaSeedData(storageDir):
+# Throws exception if ODS seedfiles are being pushed to the wrong directory.
+# Throws exception if GKA seedfiles are being pushed to the wrong directory.
+# @param seedfileType- Option specifying which seedfiles to push ("GKA" or "ODS")
+def pushSeedData(seedfileType=None):
 
-	for row in gkaFiles:
-		subprocess.call(["mv",row,storageDir])
+	if (seedfileType==None):
+		print "No seedfiles were specified."
+	elif (seedfileType=="GKA"):
+		for row in gkaFiles:
+			subprocess.call(["mv",row,GKA_INPUT_DEST])
+	elif (seedfileType=="ODS"):
+		for row in 	odsFiles:
+			subprocess.call(["mv",row,ODS_INPUT_DEST])
 
 
 # MAIN SCRIPT
@@ -568,11 +583,16 @@ def main():
 	# closeDeleteFiles(gkaFiles)
 	# os.rmdir(path)
 
-	# Trigger cka_config_data_load.ksh to output to CKA DB
-	# subprocess.call(["."+ckaDataLoad_script,processDate])
-
 	# Only works in dev-environment
-	pushGkaSeedData(destination_GKAseedFile)
+	pushSeedData("GKA")
+	pushSeedData("ODS")
+
+	# Trigger cka_config_data_load.ksh to output to CKA DB
+	subprocess.call([ckaDataLoad_script,newProcessDate])
+
+	# MUST LOGIN TO ODS BEFORE TRIGGERING THIS SCRIPT
+	# Trigger tlog_config_data_load.ksh to output to ODconfig
+	# subprocess.call([odsDataLoad_script,processDate])
 
 if __name__ == '__main__':
 	main()
