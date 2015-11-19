@@ -8,6 +8,10 @@ import csv
 from collections import deque
 from subprocess import Popen, PIPE
 
+# Remove directory if exists.
+if (os.path.exists("TempProcessing")):
+		subprocess.call(['rm', '-r', 'TempProcessing'])
+
 ## Loads all data (seed-files) needed for automating the configuration process.
 
 # Commented out while developing
@@ -317,7 +321,7 @@ def inputConnectionDetails():
 	# connectDetails += (raw_input("Specify the NTZ_ODS_ODS_DB: "),)
 	# connectDetails += (raw_input("Specify the NTZ_ODS_CKR_DB: "),)
 
-	connectDetails = ('NANTZ85.NIELSEN.COM', 'AODR1Q85', 'AODR1Q_LC2_TLOG_STG', 'AOD85', 'AODR1Q_LC2_TLOG_ODS', 'AODR1Q_CKR_ADV')
+	connectDetails = ("NANTZ85.NIELSEN.COM", "AODR1Q85", "AODR1Q_LC2_TLOG_STG", "AOD85", "AODR1Q_LC2_TLOG_ODS", "AODR1Q_CKR_ADV")
 
 	return connectDetails
 
@@ -373,8 +377,13 @@ def main():
 	# subprocess.call(['sqlplus', '-S', od_connectionParam, '@CIF_Config_Parameterized.sql', paramList[0], paramList[1], paramList[2], paramList[3], paramList[4], paramList[5], paramList[6], paramList[7], paramList[8], connectParams[0], connectParams[1], connectParams[2], connectParams[3], connectParams[4], connectParams[5], platformID, connectionID])
 
 	# subprocess.call(['sqlplus', '-S', od_connectionParam, '@CIF_Config_Parameterized.sql', paramList, connectParams, platformID, connectionID])
-
-	subprocess.call(cmd)
+	
+	addOrDrop = raw_input("Add data (Y) or Drop data (N)? --> ")
+	if (addOrDrop == "Y"):
+		subprocess.call(cmd)
+	elif (addOrDrop == "N"):
+		cmd[2] = "@removeAddendums.sql"
+		subprocess.call(cmd)
 
 	# MUST LOGIN TO GKA BEFORE TRIGGERING THIS SCRIPT
 	# Trigger cka_config_data_load.ksh to output to CKA DB
