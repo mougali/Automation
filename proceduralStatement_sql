@@ -1,0 +1,44 @@
+DECLARE
+
+	v_stmt_str VARCHAR2(1000) := 'INSERT INTO PLATFORM_STCK VALUES(:g_pID, :g_pDesc, SYSDATE, SYSDATE, NULL)';
+
+	v_stmt_create1 VARCHAR2(1000) := 'create table PLATFORM_STCK_BKP_&1 as select * from PLATFORM_STCK';
+	v_stmt_create2 VARCHAR2(1000) := 'create table PLATFORM_DTL_BKP_&1 as select * from PLATFORM_DTL';
+	v_stmt_create3 VARCHAR2(1000) := 'create table CONNECTION_DETAILS_&1 as select * from CONNECTION_DETAILS';
+	v_stmt_create4 VARCHAR2(1000) := 'create table PROP_CNTNT_BKP_&1 as select * from PROP_CNTNT';
+	v_stmt_create5 VARCHAR2(1000) := 'create table OPT_TAB_COL_BKP_&1 as select * from OPT_TAB_COL';
+	v_stmt_create6 VARCHAR2(1000) := 'create table SRC_BKP_&1 as select * from SRC';
+	v_stmt_create7 VARCHAR2(1000) := 'create table CLNT_BKP_&1 as select * from CLNT';
+
+	var_platformID NUMBER(10, 0) := &16;
+	var_platformDesc VARCHAR2(100 BYTE) := '&2';
+
+BEGIN
+	
+	EXECUTE IMMEDIATE v_stmt_create1;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create2;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create3;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create4;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create5;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create6;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create7;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_str
+		USING var_platformID, var_platformDesc;
+	COMMIT;
+
+END;
+/

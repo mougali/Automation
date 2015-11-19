@@ -44,9 +44,15 @@ passwordGKA="ckaadvaodr5dev"
 sidGKA="CKA280D"
 connectionString=userGKA+"/"+passwordGKA+"@"+sidGKA
 
-userODS=""
-passwordODS=""
-sidODS=""
+# Set login credentials (for ODconfig)
+userODS = 'AODR45ODCONFIGD'
+pwdODS = 'odconfigaodr5dev'
+sidODS = 'CMI280D'
+schemaODS = 'AODR45ODCONFIGD'
+od_connectionParam=userODS+"/"+pwdODS+"@"+sidODS
+
+connectionLiteral = "AODR45ODCONFIGD/odconfigaodr5dev@CMI280D"
+
 # Command to initiate and connect to SQL*PLUS
 # sqlplus -S AODR45CKAADVD/ckaadvaodr5dev@CKA280D
 # End login information
@@ -302,13 +308,16 @@ def pushSeedData(seedfileType=None):
 def inputConnectionDetails():
 	print("PLEASE ENTER THE FOLLOWING PARAMS FOR CONNECTION-DETAILS")
 
-	connectDetails = ()
-	connectDetails.append(raw_input("Specify the NTZ_ODS_STG_SVR: "))
-	connectDetails.append(raw_input("Specify the NTZ_ODS_STG_UID: "))
-	connectDetails.append(raw_input("Specify the NTZ_ODS_STG_DB: "))
-	connectDetails.append(raw_input("Specify the NTZ_ODS_STG_PW: "))
-	connectDetails.append(raw_input("Specify the NTZ_ODS_ODS_DB: "))
-	connectDetails.append(raw_input("Specify the NTZ_ODS_CKR_DB: "))
+	# Temporarily commented out for automated testing.
+	# connectDetails = ()
+	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_SVR: "),)
+	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_UID: "),)
+	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_DB: "),)
+	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_PW: "),)
+	# connectDetails += (raw_input("Specify the NTZ_ODS_ODS_DB: "),)
+	# connectDetails += (raw_input("Specify the NTZ_ODS_CKR_DB: "),)
+
+	connectDetails = ('NANTZ85.NIELSEN.COM', 'AODR1Q85', 'AODR1Q_LC2_TLOG_STG', 'AOD85', 'AODR1Q_LC2_TLOG_ODS', 'AODR1Q_CKR_ADV')
 
 	return connectDetails
 
@@ -336,32 +345,36 @@ def main():
 	# pushSeedData("GKA")
 	pushSeedData("ODS")
 
-	USERNAME = 'AODR45ODCONFIGD'
-	PWD = 'odconfigaodr5'
-	DB_NAME = 'CMI280D'
-	SCHEMA = 'AODR45ODCONFIGD'
-
-	od_connectionParam=USERNAME+"/"+PWD+"@"+DB_NAME
-
 	date="16nov2015"
 	SRC_CD="WAL"
 	SRC_DSC="WALMART"
-	SRC_ID=55
+	SRC_ID="55"
 	CKA_SUB_NM="WAL"
-	CKA_SUB_ID=55
+	CKA_SUB_ID="55"
 	CLNT_CD="WAL"
 	CLNT_DSC="WALMART"
-	CLNT_ID=21
+	CLNT_ID="21"
 
 	platformID = raw_input("Please specify PLATFORM ID: ")
-	connectionID = platformID * 10
+	connectionID = int(platformID)*10
+	connectionID = str(connectionID)
 
 	paramList = (date, SRC_CD, SRC_DSC, SRC_ID, CKA_SUB_NM, CKA_SUB_ID, CLNT_CD, CLNT_DSC, CLNT_ID)
 	connectParams = inputConnectionDetails()
 
+	cmd = ["sqlplus", od_connectionParam, "@CIF_Config_Parameterized.sql"]
+	cmd += paramList
+	cmd += connectParams
+	cmd += (platformID, connectionID)
+	print cmd
+
 	# Call CIF_Config.sql
 	# Used to setup platform and connection details for client.
-	subprocess.call(['sqlplus', '-S', od_connectionParam, "@CIF_Config_Parameterized.sql", permaList, connectParams, platformID, connectionID])
+	# subprocess.call(['sqlplus', '-S', od_connectionParam, '@CIF_Config_Parameterized.sql', paramList[0], paramList[1], paramList[2], paramList[3], paramList[4], paramList[5], paramList[6], paramList[7], paramList[8], connectParams[0], connectParams[1], connectParams[2], connectParams[3], connectParams[4], connectParams[5], platformID, connectionID])
+
+	# subprocess.call(['sqlplus', '-S', od_connectionParam, '@CIF_Config_Parameterized.sql', paramList, connectParams, platformID, connectionID])
+
+	subprocess.call(cmd)
 
 	# MUST LOGIN TO GKA BEFORE TRIGGERING THIS SCRIPT
 	# Trigger cka_config_data_load.ksh to output to CKA DB

@@ -1,0 +1,20 @@
+CREATE OR REPLACE PROCEDURE
+Insert_New_Record
+IS
+DECLARE
+  var_pName varchar(7) := "OpenTensor"
+  var_desc varchar(55) := "Open-sourcing AI"
+  var_id int := 4
+BEGIN
+  INSERT INTO ForgeRock (id, productName, description)
+  VALUES (var_id, var_pName, var_desc);
+  IF (SQL%NOTFOUND)
+	THEN
+		dbms_output.put_line('Insert error?!');
+  END IF;
+END;
+
+BEGIN
+  Insert_New_Record;
+END;
+/
