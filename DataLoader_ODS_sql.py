@@ -33,13 +33,6 @@ suffix=".csv"
 # Standards files (.csv's enlisting default/required data for each seed-file)
 objGrpStandardsFile = os.getcwd()+"/Resources/OBJ_GRP_STANDARD.csv"
 sbjAreaStandardsFile = os.getcwd()+"/Resources/SBJ_AREA_STANDARD.csv"
-# natKeyStandardsFile = os.getcwd()+"/Resources/NAT_KEY_STANDARD.csv"
-# subDimNatStandardsFile = os.getcwd()+"/Resources/SUB_DIM_NAT_STANDARD.csv"
-# natKeyStandardsFile_SCD = os.getcwd()+"/Resources/NAT_KEY_SCD_STANDARD.csv"
-
-# # Temporary standards files (needed to modify data values for each new run)
-# temp_natKeyStandardsFile = os.getcwd()+"/TempProcessing/NAT_KEY_STANDARD_"+newProcessDate+".csv"
-# temp_subDimNatStandardsFile = os.getcwd()+"/TempProcessing/SUB_DIM_NAT_STANDARD_"+newProcessDate+".csv"
 
 # Login information for databases and environments
 # To-Do: ROUTE PASSWORD INPUT THROUGH ODconfig
@@ -60,10 +53,6 @@ connectionLiteral = "AODR45ODCONFIGD/odconfigaodr5dev@CMI280D"
 # Command to initiate and connect to SQL*PLUS
 # sqlplus -S AODR45CKAADVD/ckaadvaodr5dev@CKA280D
 # End login information
-
-# # Table information for GKA
-# subTable="SUB_LOYALTYTEST"
-# subDimNatKeyTable="SUB_DIM_NAT_KEY_TYP_LOYALTYTEST"
 
 # seed-file info (TEMPORARY)
 subSeedName="TMPL_SUB_DATA_20150914.csv"
@@ -93,12 +82,6 @@ odSeedfileLocations =  [pre_ods + "TMPL_CUST_ADAPT_" + processDate + suffix,
 						pre_ods + "TMPL_STD_FMT_META_DATA_" + processDate + suffix,
 						pre_ods + "TMPL_SRVC_ORCH_DATA_" + processDate + suffix,
 						pre_ods + "TMPL_DIM_DATA_" + processDate + suffix]
-
-# gkaSeedfileLocations = [pre_gka + "TMPL_DIM_DATA_" + processDate + suffix,
-# 						pre_gka + "TMPL_NAT_KEY_TYP_DATA_" + processDate + suffix,
-# 						pre_gka + "TMPL_SUB_DATA_" + processDate + suffix,
-# 						pre_gka + "TMPL_SUB_DIM_NAT_KEY_TYP_DATA_" + processDate + suffix]
-
 
 # Make directory for temporary Files (only works in Python >= 3.2)
 # os.makedirs(path, exist_ok=True)
@@ -371,26 +354,14 @@ def main():
 	cmd += connectParams
 	cmd += (platformID, connectionID)
 	print cmd
-
-	# Call CIF_Config.sql
-	# Used to setup platform and connection details for client.
-	# subprocess.call(['sqlplus', '-S', od_connectionParam, '@CIF_Config_Parameterized.sql', paramList[0], paramList[1], paramList[2], paramList[3], paramList[4], paramList[5], paramList[6], paramList[7], paramList[8], connectParams[0], connectParams[1], connectParams[2], connectParams[3], connectParams[4], connectParams[5], platformID, connectionID])
-
-	# subprocess.call(['sqlplus', '-S', od_connectionParam, '@CIF_Config_Parameterized.sql', paramList, connectParams, platformID, connectionID])
 	
 	addOrDrop = raw_input("Add data (Y) or Drop data (N)? --> ")
 	if (addOrDrop == "Y"):
 		subprocess.call(cmd)
+		subprocess.call([odsDataLoad_script,newProcessDate])
 	elif (addOrDrop == "N"):
 		cmd[2] = "@removeAddendums.sql"
 		subprocess.call(cmd)
-
-	# MUST LOGIN TO GKA BEFORE TRIGGERING THIS SCRIPT
-	# Trigger cka_config_data_load.ksh to output to CKA DB
-	# subprocess.call([ckaDataLoad_script,processDate])
-
-	# Trigger tlog_config_data_load.ksh to output to ODconfig
-	# subprocess.call([odsDataLoad_script,newProcessDate])
 
 if __name__ == '__main__':
 	main()

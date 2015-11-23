@@ -8,10 +8,6 @@ import csv
 from collections import deque
 from subprocess import Popen, PIPE
 
-# Remove directory if exists.
-if (os.path.exists("TempProcessing")):
-		subprocess.call(['rm', '-r', 'TempProcessing'])
-
 ## Loads all data (seed-files) needed for automating the configuration process.
 
 # Commented out while developing
@@ -33,6 +29,13 @@ suffix=".csv"
 # Standards files (.csv's enlisting default/required data for each seed-file)
 objGrpStandardsFile = os.getcwd()+"/Resources/OBJ_GRP_STANDARD.csv"
 sbjAreaStandardsFile = os.getcwd()+"/Resources/SBJ_AREA_STANDARD.csv"
+# natKeyStandardsFile = os.getcwd()+"/Resources/NAT_KEY_STANDARD.csv"
+# subDimNatStandardsFile = os.getcwd()+"/Resources/SUB_DIM_NAT_STANDARD.csv"
+# natKeyStandardsFile_SCD = os.getcwd()+"/Resources/NAT_KEY_SCD_STANDARD.csv"
+
+# # Temporary standards files (needed to modify data values for each new run)
+# temp_natKeyStandardsFile = os.getcwd()+"/TempProcessing/NAT_KEY_STANDARD_"+newProcessDate+".csv"
+# temp_subDimNatStandardsFile = os.getcwd()+"/TempProcessing/SUB_DIM_NAT_STANDARD_"+newProcessDate+".csv"
 
 # Login information for databases and environments
 # To-Do: ROUTE PASSWORD INPUT THROUGH ODconfig
@@ -41,18 +44,16 @@ passwordGKA="ckaadvaodr5dev"
 sidGKA="CKA280D"
 connectionString=userGKA+"/"+passwordGKA+"@"+sidGKA
 
-# Set login credentials (for ODconfig)
-userODS = 'AODR45ODCONFIGD'
-pwdODS = 'odconfigaodr5dev'
-sidODS = 'CMI280D'
-schemaODS = 'AODR45ODCONFIGD'
-od_connectionParam=userODS+"/"+pwdODS+"@"+sidODS
-
-connectionLiteral = "AODR45ODCONFIGD/odconfigaodr5dev@CMI280D"
-
+userODS=""
+passwordODS=""
+sidODS=""
 # Command to initiate and connect to SQL*PLUS
 # sqlplus -S AODR45CKAADVD/ckaadvaodr5dev@CKA280D
 # End login information
+
+# # Table information for GKA
+# subTable="SUB_LOYALTYTEST"
+# subDimNatKeyTable="SUB_DIM_NAT_KEY_TYP_LOYALTYTEST"
 
 # seed-file info (TEMPORARY)
 subSeedName="TMPL_SUB_DATA_20150914.csv"
@@ -82,6 +83,12 @@ odSeedfileLocations =  [pre_ods + "TMPL_CUST_ADAPT_" + processDate + suffix,
 						pre_ods + "TMPL_STD_FMT_META_DATA_" + processDate + suffix,
 						pre_ods + "TMPL_SRVC_ORCH_DATA_" + processDate + suffix,
 						pre_ods + "TMPL_DIM_DATA_" + processDate + suffix]
+
+# gkaSeedfileLocations = [pre_gka + "TMPL_DIM_DATA_" + processDate + suffix,
+# 						pre_gka + "TMPL_NAT_KEY_TYP_DATA_" + processDate + suffix,
+# 						pre_gka + "TMPL_SUB_DATA_" + processDate + suffix,
+# 						pre_gka + "TMPL_SUB_DIM_NAT_KEY_TYP_DATA_" + processDate + suffix]
+
 
 # Make directory for temporary Files (only works in Python >= 3.2)
 # os.makedirs(path, exist_ok=True)
@@ -295,16 +302,13 @@ def pushSeedData(seedfileType=None):
 def inputConnectionDetails():
 	print("PLEASE ENTER THE FOLLOWING PARAMS FOR CONNECTION-DETAILS")
 
-	# Temporarily commented out for automated testing.
-	# connectDetails = ()
-	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_SVR: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_UID: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_DB: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_PW: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_ODS_DB: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_CKR_DB: "),)
-
-	connectDetails = ("NANTZ85.NIELSEN.COM", "AODR1Q85", "AODR1Q_LC2_TLOG_STG", "AOD85", "AODR1Q_LC2_TLOG_ODS", "AODR1Q_CKR_ADV")
+	connectDetails = ()
+	connectDetails.append(raw_input("Specify the NTZ_ODS_STG_SVR: "))
+	connectDetails.append(raw_input("Specify the NTZ_ODS_STG_UID: "))
+	connectDetails.append(raw_input("Specify the NTZ_ODS_STG_DB: "))
+	connectDetails.append(raw_input("Specify the NTZ_ODS_STG_PW: "))
+	connectDetails.append(raw_input("Specify the NTZ_ODS_ODS_DB: "))
+	connectDetails.append(raw_input("Specify the NTZ_ODS_CKR_DB: "))
 
 	return connectDetails
 
@@ -332,36 +336,39 @@ def main():
 	# pushSeedData("GKA")
 	pushSeedData("ODS")
 
+	USERNAME = 'AODR45ODCONFIGD'
+	PWD = 'odconfigaodr5'
+	DB_NAME = 'CMI280D'
+	SCHEMA = 'AODR45ODCONFIGD'
+
+	od_connectionParam=USERNAME+"/"+PWD+"@"+DB_NAME
+
 	date="16nov2015"
 	SRC_CD="WAL"
 	SRC_DSC="WALMART"
-	SRC_ID="55"
+	SRC_ID=55
 	CKA_SUB_NM="WAL"
-	CKA_SUB_ID="55"
+	CKA_SUB_ID=55
 	CLNT_CD="WAL"
 	CLNT_DSC="WALMART"
-	CLNT_ID="21"
+	CLNT_ID=21
 
 	platformID = raw_input("Please specify PLATFORM ID: ")
-	connectionID = int(platformID)*10
-	connectionID = str(connectionID)
+	connectionID = platformID * 10
 
 	paramList = (date, SRC_CD, SRC_DSC, SRC_ID, CKA_SUB_NM, CKA_SUB_ID, CLNT_CD, CLNT_DSC, CLNT_ID)
 	connectParams = inputConnectionDetails()
 
-	cmd = ["sqlplus", od_connectionParam, "@CIF_Config_Parameterized.sql"]
-	cmd += paramList
-	cmd += connectParams
-	cmd += (platformID, connectionID)
-	print cmd
-	
-	addOrDrop = raw_input("Add data (Y) or Drop data (N)? --> ")
-	if (addOrDrop == "Y"):
-		subprocess.call(cmd)
-		subprocess.call([odsDataLoad_script,newProcessDate])
-	elif (addOrDrop == "N"):
-		cmd[2] = "@removeAddendums.sql"
-		subprocess.call(cmd)
+	# Call CIF_Config.sql
+	# Used to setup platform and connection details for client.
+	subprocess.call(['sqlplus', '-S', od_connectionParam, "@CIF_Config_Parameterized.sql", permaList, connectParams, platformID, connectionID])
+
+	# MUST LOGIN TO GKA BEFORE TRIGGERING THIS SCRIPT
+	# Trigger cka_config_data_load.ksh to output to CKA DB
+	# subprocess.call([ckaDataLoad_script,processDate])
+
+	# Trigger tlog_config_data_load.ksh to output to ODconfig
+	# subprocess.call([odsDataLoad_script,newProcessDate])
 
 if __name__ == '__main__':
 	main()
