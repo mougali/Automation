@@ -4,24 +4,21 @@ import os, sys, stat
 import errno, shutil
 import subprocess
 import csv
+import glob
 
 from collections import deque
 from subprocess import Popen, PIPE
 
-# Remove directory if exists.
-if (os.path.exists("TempProcessing")):
-		subprocess.call(['rm', '-r', 'TempProcessing'])
-
 ## Loads all data (seed-files) needed for automating the configuration process.
 
 # Commented out while developing
-# SUB_DSC = raw_input("Please enter Subscriber Name: ")
-# SUB_NM = raw_input("Please enter 3-letter Subscriber Acronym: ")
-# SUB_ID = raw_input("Please enter Subscriber ID: ")
+# SRC_DSC = raw_input("Please enter Subscriber Name: ")
+# SRC_CD = raw_input("Please enter 3-letter Subscriber Acronym: ")
+# SRC_ID = raw_input("Please enter Subscriber ID: ")
 
-SUB_DSC = "WALMART"
-SUB_NM = "WAL"
-SUB_ID = 55
+SRC_DSC = "WALMART"
+SRC_CD = "WAL"
+SRC_ID = 55
 pre_ods=os.getcwd()+"/ODS/"
 pre_gka=os.getcwd()+"/GKA/"
 processDate="20150914"
@@ -30,9 +27,15 @@ newProcessDate="20151112"
 newProcessDate_text="12nov2015"
 suffix=".csv"
 
+date="16nov2015"
+
 # Standards files (.csv's enlisting default/required data for each seed-file)
+objStdFile = os.getcwd()+"/Resources/OBJ_STANDARD.csv"
 objGrpStandardsFile = os.getcwd()+"/Resources/OBJ_GRP_STANDARD.csv"
 sbjAreaStandardsFile = os.getcwd()+"/Resources/SBJ_AREA_STANDARD.csv"
+
+# SQL scripts
+dropRecreateTablesScript = os.getcwd()+"/CIF_Seedfile_Config_load.sql"
 
 # Login information for databases and environments
 # To-Do: ROUTE PASSWORD INPUT THROUGH ODconfig
@@ -53,9 +56,6 @@ connectionLiteral = "AODR45ODCONFIGD/odconfigaodr5dev@CMI280D"
 # Command to initiate and connect to SQL*PLUS
 # sqlplus -S AODR45CKAADVD/ckaadvaodr5dev@CKA280D
 # End login information
-
-# seed-file info (TEMPORARY)
-subSeedName="TMPL_SUB_DATA_20150914.csv"
 
 # Other parameters
 geolocation = "US"		# USA is default value
@@ -83,11 +83,10 @@ odSeedfileLocations =  [pre_ods + "TMPL_CUST_ADAPT_" + processDate + suffix,
 						pre_ods + "TMPL_SRVC_ORCH_DATA_" + processDate + suffix,
 						pre_ods + "TMPL_DIM_DATA_" + processDate + suffix]
 
-# Make directory for temporary Files (only works in Python >= 3.2)
-# os.makedirs(path, exist_ok=True)
+# **********END VARIABLE INIT**************
+
 
 # Make directory for temporary files
-# Otherwise, use:
 def mkdir_p(path):
     # try:
     #     os.makedirs(path)
@@ -97,43 +96,61 @@ def mkdir_p(path):
     #     else: raise
     os.makedirs(path)
 
-path=os.getcwd()+"/TempProcessing/"
-mkdir_p(path)
+# Makes file at path executable (modifies user-permissions)
+def make_exec(path):
+	mode = os.stat(path).st_mode
+	os.chmod(path, mode | stat.S_IEXEC)
 
-# Duplicate files and insert into new temp path
-# Generate file objects for each copied seedfile and
-# add to the respective file array
+# Set all items needed for startup/initialization 
+def initStartup():
+	path=os.getcwd()+"/TempProcessing/"
+	
+	# Remove directory if exists.
+	if (os.path.exists("TempProcessing")):
+		subprocess.call(['rm', '-r', 'TempProcessing'])
+	
+	# Make directory
+	mkdir_p(path)
 
-odsFiles = list()
-# gkaFiles = list()
+	# List containing locations of new versions of seed-files (w/ new process dates)
+	# NOTE: These are not the files themselves, just the path locations
+	odsFiles = list()
 
-# Copy original file contents into temporary production/processing files.
-# Store locations of temp-files in ods and gka lists.
-for seedfile in odSeedfileLocations:
-	seedfileName=seedfile.split('/')[-1]
+	# Copy original file contents into temporary production/processing files.
+	# Store locations of temp-files in ods and gka lists.
+	for seedfile in odSeedfileLocations:
+		seedfileName=seedfile.split('/')[-1]
 
-	# Modify name to describe new processing date
-	seedfileName = seedfileName.replace(processDate, newProcessDate)
-	shutil.copy2(seedfile, path+seedfileName)
+		# Modify name to describe new processing date
+		seedfileName = seedfileName.replace(processDate, newProcessDate)
+		
+		# Copy new version (w/ updated process date) of seed-file
+		# to the new path
+		shutil.copy2(seedfile, path+seedfileName)
 
-	# Unsafe to keep files open
-	# odsFiles.append(open(path+seedfileName))
-	odsFiles.append(path+seedfileName)
+		odsFiles.append(path+seedfileName)
 
-# for seedfile in gkaSeedfileLocations:
-# 	seedfileName=seedfile.split('/')[-1]
 
-# 	# Modify name to describe new processing date
-# 	seedfileName = seedfileName.replace(processDate, newProcessDate)
-# 	shutil.copy2(seedfile, path+seedfileName)
+# Back-up original seedfiles in data/inputs/config/
+# @param seedfileDirectory - Location/Directory of seedfiles in the environment.
+# @param processDate - Date suffix of seedfile names. Used in naming of backup directory.
+def backupSeedFiles(seedfileDirectory, processDate):
 
-# 	# Unsafe programming practice to keep files open
-# 	# gkaFiles.append(open(path+seedfileName))
-# 	gkaFiles.append(path+seedfileName)
+	# Make directory (named after processDate in YYYYMMDD) if doesn't exist
+	path=os.path.join(seedfileDirectory, processDate+"_BKP")
+	if not os.path.exists(path):
+		os.makedirs(path)
 
-# # Generate temporary duplicates of standards-files
-# shutil.copy2(natKeyStandardsFile, temp_natKeyStandardsFile)
-# shutil.copy2(subDimNatStandardsFile, temp_subDimNatStandardsFile)
+	# regexStr=r'*'+processDate
+	# print glob.glob(seedfileDirectory+regexStr)
+
+	# # Find and move the relevant seedfiles
+	# for seedcsv in glob.glob(r'*'+processDate+'.csv'):
+	# 	# Push original seedfiles into path
+	# 	shutil.move(seedcsv, path)
+
+	stmnt="mv "+seedfileDirectory+"*"+processDate+".csv"+" "+path
+	subprocess.call(stmnt, shell=True)
 
 # Be sure to delete path at the end of program processing
 def closeDeleteFiles(filesArr):
@@ -153,18 +170,31 @@ def closeDeleteFiles(filesArr):
 				filename.close()
 			os.remove(filename.name)
 
-# Makes file at path executable (modifies user-permissions)
-def make_exec(path):
-	mode = os.stat(path).st_mode
-	os.chmod(path, mode | stat.S_IEXEC)
+# Append default records to TMPL_OBJ_DATA
+# @param objDataFile - CSV file to output to.
+# @param standardsFile - File to input from.
+def add_obj_data(objDataFile, standardsFile):
 
-# # Append record to TMPL_SUB_DATA_20150914.csv (in gkaFiles[2])
-# def add_sub_data(subscriberDataFile):
-# 	# Parameter 'a' signifies to writer that it should append to file
-# 	f = open(subscriberDataFile, 'a')
-# 	csvWriter = csv.writer(f, quoting=csv.QUOTE_ALL)
-# 	csvWriter.writerow([SUB_ID,SUB_NM,SUB_DSC])
-# 	f.close()
+	stdFile = open(standardsFile)		# read-only
+	outFile = open(objDataFile, 'a')	# write-file (being appended)
+
+	reader = csv.reader(stdFile)
+	writer = csv.writer(outFile, quoting=csv.QUOTE_NONE, lineterminator=os.linesep)
+
+	for row in reader:
+		
+		paramList = [SRC_CD, ]
+		paramList += row
+
+		# If datafile contains reference to SRC_CD (3-letter acronym),
+		# ensure that record being output to DB contains the appropriate name.
+		if ("***" in paramList[10]):
+			paramList[10] = paramList[10].replace("***", SRC_CD)	
+
+		writer.writerow(paramList)
+
+	stdFile.close()
+	outFile.close()
 
 # Append record to TMPL_OBJ_GRP_DATA (in odsFiles[2])
 def add_obj_grp_data(objGrpDataFile, standardsFile):
@@ -176,11 +206,12 @@ def add_obj_grp_data(objGrpDataFile, standardsFile):
 	writer = csv.writer(outFile, quoting=csv.QUOTE_NONE)
 
 	for row in reader:
-		writer.writerow([SUB_NM,row[0],row[1],row[2],row[3]])
+		writer.writerow([SRC_CD,row[0],row[1],row[2],row[3]])
 
 	stdFile.close()
 	outFile.close()
 
+# Append records to TMPL_SBJ_AREA_DATA
 def add_sbj_area_data(sbjAreaDataFile, standardsFile):
 
 	stdFile = open(standardsFile)		# read-only
@@ -190,10 +221,26 @@ def add_sbj_area_data(sbjAreaDataFile, standardsFile):
 	writer = csv.writer(outFile,quoting=csv.QUOTE_NONE,lineterminator='\n')
 
 	for row in reader:
-		writer.writerow([SUB_NM,row[0],row[1],row[2],row[3],row[4],row[5],row[6],""])
+		writer.writerow([SRC_CD,row[0],row[1],row[2],row[3],row[4],row[5],row[6],""])
 
 	stdFile.close()
 	outFile.close()
+
+# Append records to TMPL_PRCS_CFG
+# All records are generally the same, in the format: SUB_CD, 'N', '600'
+# @param prcsCfgDataFile - Path of seedfile to be appended
+# @param standardsFile - Path of file to be read from (used as data input)
+def add_prcs_cfg_data(prcsCfgDataFile, standardsFile):
+
+# Append records to TMPL_OBJ_PRCS_EXCPN
+# @param objPrcsExcpnFile - Path of seedfile to be appended
+# @param standardsFile - Path of file to be read from (used as data input)
+def add_obj_prcs_excpn_data(objPrcsExcpnFile, standardsFile):
+
+# Append records to TMPL_OBJ_PRCS_EXCPN
+# @param objPrcsExcpnFile - Path of seedfile to be appended
+# @param standardsFile - Path of file to be read from (used as data input)
+def add_cust_adapt_data(custAdaptFile, standardsFile):
 
 # Find and return last row of given file
 # @param csv_filename CSV file from which final row should be obtained
@@ -202,10 +249,6 @@ def get_last_row(csv_filename):
 	reader = csv.reader(f,delimiter=',')
 	return deque(reader).pop()
 
-	# Python >= 2.7 only
-	# with open(csv_filename, 'rb') as f:
-	# 	return deque(csv.reader(f), 1)[0]
-
 # Generate SQL file for GKA database
 # @param tableName
 # @param seed-file
@@ -213,7 +256,6 @@ def createGkaQuery(tableName, seedFile):
 
 	# Call helper method
 	queryResult, errors = getColNames(tableName)
-
 
 # Get column names for given table
 # Helper function for createGkaQuery
@@ -308,20 +350,36 @@ def inputConnectionDetails():
 
 	return connectDetails
 
+# Function that takes the sqlCommand and connectString and returns the queryResult and errorMessage (if any)
+# CREDIT: https://moizmuhammad.wordpress.com/2012/01/31/run-oracle-commands-from-python-via-sql-plus/
+def runSqlQuery(paramList):
+
+	params = ['sqlplus', '-S', ]
+	params += paramList
+	session = Popen(params, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+	return session.communicate()	
+
 # MAIN SCRIPT
 # Currently able to write out standard/default values for SUBSCRIBER, OBJECT_GROUPS, and SUBJECT_AREAS
 # ADDENDUM 10/26/15: Also writing out default values for TMPL_NAT_KEY_DATA, TMPL_SUB_DIM_NAT_KEY_DATA
 def main():
 
+	# Perform house-cleaning activities needed for startup
+	initStartup()
+
+	# Backup files
+	backupSeedFiles(ODS_INPUT_DEST, processDate)
+
 	# add_sub_data(gkaFiles[2])
 
 	add_obj_grp_data(odsFiles[2],objGrpStandardsFile)
+	add_obj_data(odsFiles[1], objStdFile)
 	add_sbj_area_data(odsFiles[5],sbjAreaStandardsFile)
 
 	# objGrpScriptPath = os.getcwd()+"/ODS/objGroupFiller.sh"
 	# # Change file permission to "Execute by Owner"
 	# make_exec(objGrpScriptPath)
-	# subprocess.call([objGrpScriptPath, SUB_NM, SUB_ID])
+	# subprocess.call([objGrpScriptPath, SRC_CD, SRC_ID])
 
 	# Clean-up
 	# closeDeleteFiles(odsFiles)
@@ -332,12 +390,11 @@ def main():
 	# pushSeedData("GKA")
 	pushSeedData("ODS")
 
-	date="16nov2015"
-	SRC_CD="WAL"
-	SRC_DSC="WALMART"
-	SRC_ID="55"
-	CKA_SUB_NM="WAL"
-	CKA_SUB_ID="55"
+	# SRC_CD="WAL"
+	# SRC_DSC="WALMART"
+	# SRC_ID="55"
+	CKA_SRC_CD="WAL"
+	CKA_SRC_ID="55"
 	CLNT_CD="WAL"
 	CLNT_DSC="WALMART"
 	CLNT_ID="21"
@@ -346,22 +403,26 @@ def main():
 	connectionID = int(platformID)*10
 	connectionID = str(connectionID)
 
-	paramList = (date, SRC_CD, SRC_DSC, SRC_ID, CKA_SUB_NM, CKA_SUB_ID, CLNT_CD, CLNT_DSC, CLNT_ID)
+	paramList = (date, SRC_CD, SRC_DSC, SRC_ID, CKA_SRC_CD, CKA_SRC_ID, CLNT_CD, CLNT_DSC, CLNT_ID)
 	connectParams = inputConnectionDetails()
 
-	cmd = ["sqlplus", od_connectionParam, "@CIF_Config_Parameterized.sql"]
+	# Generate SQL command to run CIF_Config_Parameterized.sql,
+	# complete with needed parameters.
+	cmd = [od_connectionParam, "@CIF_Config_Parameterized.sql"]
 	cmd += paramList
 	cmd += connectParams
 	cmd += (platformID, connectionID)
-	print cmd
-	
+
+	dropRecreateParams = [od_connectionParam, "@"+dropRecreateTablesScript]
+
 	addOrDrop = raw_input("Add data (Y) or Drop data (N)? --> ")
 	if (addOrDrop == "Y"):
-		subprocess.call(cmd)
+		runSqlQuery(dropRecreateParams)
+		runSqlQuery(cmd)
 		subprocess.call([odsDataLoad_script,newProcessDate])
 	elif (addOrDrop == "N"):
-		cmd[2] = "@removeAddendums.sql"
-		subprocess.call(cmd)
+		cmd[1] = "@removeAddendums.sql"		
+		runSqlQuery(cmd)
 
 if __name__ == '__main__':
 	main()

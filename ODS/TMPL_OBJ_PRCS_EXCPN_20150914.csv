@@ -1,4 +1,3 @@
-Exception Name,Subscriber,?,?,Datafile,Process Location,?
 CHECK_CUST_ADPTR,CRF,PROUPCS,PROCHR,carr_pro_ean_sirval.CSV,Check Custom Adapter Needed,Y
 CHECK_CUST_ADPTR,CRF,PROCHARS,PROCHR,carr_pro_chars_sirval.CSV,Check Custom Adapter Needed,Y
 CHECK_CUST_ADPTR,NLS,PRODHSTRY,PRODHSTRY,PROD_PRO_HISTORY_EXTRACT.TXT,Check Custom Adapter Needed,Y
