@@ -9,16 +9,6 @@ import glob
 from collections import deque
 from subprocess import Popen, PIPE
 
-## Loads all data (seed-files) needed for automating the configuration process.
-
-# Commented out while developing
-# SRC_DSC = raw_input("Please enter Subscriber Name: ")
-# SRC_CD = raw_input("Please enter 3-letter Subscriber Acronym: ")
-# SRC_ID = raw_input("Please enter Subscriber ID: ")
-
-SRC_DSC = "WALMART"
-SRC_CD = "WAL"
-SRC_ID = 55
 pre_ods=os.getcwd()+"/ODS/"
 pre_gka=os.getcwd()+"/GKA/"
 processDate="20150914"
@@ -28,6 +18,10 @@ newProcessDate_text="12nov2015"
 suffix=".csv"
 
 date="16nov2015"
+
+# Dictionary containing all input variables.
+# Values will be loaded in a later function.
+inputDataDict = {}
 
 # Standards files (.csv's enlisting default/required data for each seed-file)
 objStdFile = os.getcwd()+"/Resources/OBJ_STANDARD.csv"
@@ -57,6 +51,10 @@ connectionLiteral = "AODR45ODCONFIGD/odconfigaodr5dev@CMI280D"
 # sqlplus -S AODR45CKAADVD/ckaadvaodr5dev@CKA280D
 # End login information
 
+# INPUT FILE (from order-form)
+inputFileName = "OrderForm.csv"
+inputFilePath = ""
+
 # Other parameters
 geolocation = "US"		# USA is default value
 
@@ -72,6 +70,7 @@ ODS_INPUT_DEST="/dsd_2/relr45d/tlog/data/inputs/config/"
 ckaDataLoad_script=CKA_CODEBASE_KSH+"cka_config_data_load.ksh"
 odsDataLoad_script=ODS_CODEBASE_KSH+"tlog_config_data_load.ksh"
 
+# List containing pathnames of all existing ODS seedfiles
 odSeedfileLocations =  [pre_ods + "TMPL_CUST_ADAPT_" + processDate + suffix,
 						pre_ods + "TMPL_OBJ_DATA_" + processDate + suffix, 
 						pre_ods + "TMPL_OBJ_GRP_DATA_" + processDate + suffix,
@@ -83,8 +82,56 @@ odSeedfileLocations =  [pre_ods + "TMPL_CUST_ADAPT_" + processDate + suffix,
 						pre_ods + "TMPL_SRVC_ORCH_DATA_" + processDate + suffix,
 						pre_ods + "TMPL_DIM_DATA_" + processDate + suffix]
 
+# List that will contain pathnames of all new ODS seedfiles
+odsFiles = ()						
+
+# Input parameters
+SRC_DSC = ""
+SRC_CD = ""
+SRC_ID = -1
+CKA_SRC_CD =""
+CKA_SRC_ID =-1
+CLNT_CD = ""
+CLNT_DSC = ""
+CLNT_ID = -1
+platformID = -1
+connectionID = -1
+
 # **********END VARIABLE INIT**************
 
+
+# Load input data from order-form file into a dictionary.
+# Assign appropriate variables.
+# @param orderFormFile - CSV file containing Parameter Names and Values
+def loadInputData(orderFormFile):
+	global inputDataDict
+
+	f = open(orderFormFile)
+	reader = csv.reader(f)
+	reader.next()	# Skip header row
+
+	counter = 0
+	for row in reader:
+		try:
+			key = row[0]
+			val = row[1]
+
+			# Raise exceptions if either field is null
+			if not key:
+				raise ValueError("Key is missing in Record " + str(counter))
+			if not val:
+				raise ValueError("Value is missing in Record " + str(counter))
+
+			inputDataDict.update({key: val})
+			counter += 1
+		except IndexError, msg:
+			print msg
+			print "Please ensure order-form is completely and accurately filled."
+			sys.exit(1)
+		except ValueError, msg:
+			print msg
+			print "Please ensure order-form is completely and accurately filled."
+			sys.exit(1)
 
 # Make directory for temporary files
 def mkdir_p(path):
@@ -103,6 +150,35 @@ def make_exec(path):
 
 # Set all items needed for startup/initialization 
 def initStartup():
+
+	# Establish location of order-form based input file
+	global inputFilePath
+	global inputFileName
+	inputFilePath = os.path.join(os.getcwd(), inputFileName)
+
+	# Call loadInputData to establish values for input parameters
+	loadInputData(inputFilePath)
+	global inputDataDict
+	for key, value in inputDataDict.iteritems():
+		print key + ": " + value
+
+	# Establish variable names from dictionary
+	# Ensure that values are assigned to the global variables
+	global SRC_DSC, SRC_CD, SRC_ID, CKA_SRC_CD, CKA_SRC_ID, CLNT_CD, CLNT_DSC, CLNT_ID
+	SRC_DSC = inputDataDict["Subscriber Name"]
+	SRC_CD = inputDataDict["Subscriber Code"]
+	SRC_ID = inputDataDict["Subscriber ID"]
+	CKA_SRC_CD = inputDataDict["CKA Subscriber Code"]
+	CKA_SRC_ID = inputDataDict["CKA Subscriber ID"]
+	CLNT_CD = SRC_CD
+	CLNT_DSC= SRC_DSC
+	CLNT_ID = "21"	# Dummy value for now (need to pull from sequence in ODconfig CLNT table)
+
+	global platformID, connectionID
+	platformID = inputDataDict["Platform ID"]
+	connectionID = int(platformID)*10
+	connectionID = str(connectionID)
+	
 	path=os.getcwd()+"/TempProcessing/"
 	
 	# Remove directory if exists.
@@ -114,6 +190,7 @@ def initStartup():
 
 	# List containing locations of new versions of seed-files (w/ new process dates)
 	# NOTE: These are not the files themselves, just the path locations
+	global odsFiles
 	odsFiles = list()
 
 	# Copy original file contents into temporary production/processing files.
@@ -129,7 +206,6 @@ def initStartup():
 		shutil.copy2(seedfile, path+seedfileName)
 
 		odsFiles.append(path+seedfileName)
-
 
 # Back-up original seedfiles in data/inputs/config/
 # @param seedfileDirectory - Location/Directory of seedfiles in the environment.
@@ -226,21 +302,23 @@ def add_sbj_area_data(sbjAreaDataFile, standardsFile):
 	stdFile.close()
 	outFile.close()
 
-# Append records to TMPL_PRCS_CFG
-# All records are generally the same, in the format: SUB_CD, 'N', '600'
-# @param prcsCfgDataFile - Path of seedfile to be appended
-# @param standardsFile - Path of file to be read from (used as data input)
-def add_prcs_cfg_data(prcsCfgDataFile, standardsFile):
+# # Append records to TMPL_PRCS_CFG
+# # All records are generally the same, in the format: SUB_CD, 'N', '600'
+# # @param prcsCfgDataFile - Path of seedfile to be appended
+# # @param standardsFile - Path of file to be read from (used as data input)
+# def add_prcs_cfg_data(prcsCfgDataFile, standardsFile):
 
-# Append records to TMPL_OBJ_PRCS_EXCPN
-# @param objPrcsExcpnFile - Path of seedfile to be appended
-# @param standardsFile - Path of file to be read from (used as data input)
-def add_obj_prcs_excpn_data(objPrcsExcpnFile, standardsFile):
 
-# Append records to TMPL_OBJ_PRCS_EXCPN
-# @param objPrcsExcpnFile - Path of seedfile to be appended
-# @param standardsFile - Path of file to be read from (used as data input)
-def add_cust_adapt_data(custAdaptFile, standardsFile):
+# # Append records to TMPL_OBJ_PRCS_EXCPN
+# # @param objPrcsExcpnFile - Path of seedfile to be appended
+# # @param standardsFile - Path of file to be read from (used as data input)
+# def add_obj_prcs_excpn_data(objPrcsExcpnFile, standardsFile):
+
+
+# # Append records to TMPL_OBJ_PRCS_EXCPN
+# # @param objPrcsExcpnFile - Path of seedfile to be appended
+# # @param standardsFile - Path of file to be read from (used as data input)
+# def add_cust_adapt_data(custAdaptFile, standardsFile):	
 
 # Find and return last row of given file
 # @param csv_filename CSV file from which final row should be obtained
@@ -335,19 +413,8 @@ def pushSeedData(seedfileType=None):
 # NTZ_ODS_CKR_DB
 # @return 6-fold tuple containing the above information.
 def inputConnectionDetails():
-	print("PLEASE ENTER THE FOLLOWING PARAMS FOR CONNECTION-DETAILS")
-
-	# Temporarily commented out for automated testing.
-	# connectDetails = ()
-	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_SVR: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_UID: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_DB: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_STG_PW: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_ODS_DB: "),)
-	# connectDetails += (raw_input("Specify the NTZ_ODS_CKR_DB: "),)
-
-	connectDetails = ("NANTZ85.NIELSEN.COM", "AODR1Q85", "AODR1Q_LC2_TLOG_STG", "AOD85", "AODR1Q_LC2_TLOG_ODS", "AODR1Q_CKR_ADV")
-
+	global inputDataDict
+	connectDetails = (inputDataDict["NTZ_ODS_STG_SVR"], inputDataDict["NTZ_ODS_STG_UID"], inputDataDict["NTZ_ODS_STG_DB"], inputDataDict["NTZ_ODS_STG_PW"], inputDataDict["NTZ_ODS_ODS_DB"], inputDataDict["NTZ_ODS_CKR_DB"])
 	return connectDetails
 
 # Function that takes the sqlCommand and connectString and returns the queryResult and errorMessage (if any)
@@ -365,6 +432,7 @@ def runSqlQuery(paramList):
 def main():
 
 	# Perform house-cleaning activities needed for startup
+	# Establishes values for necessary input parameters
 	initStartup()
 
 	# Backup files
@@ -393,15 +461,15 @@ def main():
 	# SRC_CD="WAL"
 	# SRC_DSC="WALMART"
 	# SRC_ID="55"
-	CKA_SRC_CD="WAL"
-	CKA_SRC_ID="55"
-	CLNT_CD="WAL"
-	CLNT_DSC="WALMART"
-	CLNT_ID="21"
+	# CKA_SRC_CD="WAL"
+	# CKA_SRC_ID="55"
+	# CLNT_CD=SRC_CD
+	# CLNT_DSC=SRC_DSC
+	# CLNT_ID="21"
 
-	platformID = raw_input("Please specify PLATFORM ID: ")
-	connectionID = int(platformID)*10
-	connectionID = str(connectionID)
+	# platformID = raw_input("Please specify PLATFORM ID: ")
+	# connectionID = int(platformID)*10
+	# connectionID = str(connectionID)
 
 	paramList = (date, SRC_CD, SRC_DSC, SRC_ID, CKA_SRC_CD, CKA_SRC_ID, CLNT_CD, CLNT_DSC, CLNT_ID)
 	connectParams = inputConnectionDetails()
