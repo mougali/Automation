@@ -11,8 +11,8 @@ from subprocess import Popen, PIPE
 
 pre_ods=os.getcwd()+"/ODS/"
 pre_gka=os.getcwd()+"/GKA/"
-processDate="20150914"
-processDate_text="11sep2015"
+origProcessDate="20150914"
+origProcessDate_text="11sep2015"
 newProcessDate="20151112"
 newProcessDate_text="12nov2015"
 suffix=".csv"
@@ -70,17 +70,16 @@ ODS_INPUT_DEST="/dsd_2/relr45d/tlog/data/inputs/config/"
 ckaDataLoad_script=CKA_CODEBASE_KSH+"cka_config_data_load.ksh"
 odsDataLoad_script=ODS_CODEBASE_KSH+"tlog_config_data_load.ksh"
 
-# List containing pathnames of all existing ODS seedfiles
-odSeedfileLocations =  [pre_ods + "TMPL_CUST_ADAPT_" + processDate + suffix,
-						pre_ods + "TMPL_OBJ_DATA_" + processDate + suffix, 
-						pre_ods + "TMPL_OBJ_GRP_DATA_" + processDate + suffix,
-						pre_ods + "TMPL_OBJ_PRCS_EXCPN_" + processDate + suffix,
-						pre_ods + "TMPL_PRCS_CFG_" + processDate + suffix,
-						pre_ods + "TMPL_SBJ_AREA_DATA_" + processDate + suffix,
-						pre_ods + "TMPL_SUB_DIM_KEY_DATA_" + processDate + suffix,
-						pre_ods + "TMPL_STD_FMT_META_DATA_" + processDate + suffix,
-						pre_ods + "TMPL_SRVC_ORCH_DATA_" + processDate + suffix,
-						pre_ods + "TMPL_DIM_DATA_" + processDate + suffix]
+odSeedfileLocations =  [ODS_INPUT_DEST + "TMPL_CUST_ADAPT_" + origProcessDate + suffix,
+						ODS_INPUT_DEST + "TMPL_OBJ_DATA_" + origProcessDate + suffix, 
+						ODS_INPUT_DEST + "TMPL_OBJ_GRP_DATA_" + origProcessDate + suffix,
+						ODS_INPUT_DEST + "TMPL_OBJ_PRCS_EXCPN_" + origProcessDate + suffix,
+						ODS_INPUT_DEST + "TMPL_PRCS_CFG_" + origProcessDate + suffix,
+						ODS_INPUT_DEST + "TMPL_SBJ_AREA_DATA_" + origProcessDate + suffix,
+						ODS_INPUT_DEST + "TMPL_SUB_DIM_KEY_DATA_" + origProcessDate + suffix,
+						ODS_INPUT_DEST + "TMPL_STD_FMT_META_DATA_" + origProcessDate + suffix,
+						ODS_INPUT_DEST + "TMPL_SRVC_ORCH_DATA_" + origProcessDate + suffix,
+						ODS_INPUT_DEST + "TMPL_DIM_DATA_" + origProcessDate + suffix]
 
 # List that will contain pathnames of all new ODS seedfiles
 odsFiles = ()						
@@ -148,7 +147,11 @@ def make_exec(path):
 	mode = os.stat(path).st_mode
 	os.chmod(path, mode | stat.S_IEXEC)
 
-# Set all items needed for startup/initialization 
+# Set all items needed for startup/initialization
+# loadInputData() - Load input data (from order-form) into dictionary inputDataDict.
+# Load values in inputDataDict into global variables (e.g. SRC_CD).
+# Copy most recent seedfiles from data/input/config/ into 
+# REQUIREMENT: All seedfiles must be existent in data/input/config/
 def initStartup():
 
 	# Establish location of order-form based input file
@@ -178,6 +181,10 @@ def initStartup():
 	platformID = inputDataDict["Platform ID"]
 	connectionID = int(platformID)*10
 	connectionID = str(connectionID)
+
+# Copies original seedfiles (from /data/inputs/config/) into TempProcessing/.
+# The copied seedfiles will be appended to with new records.
+def copyOrigSeedfiles():
 	
 	path=os.getcwd()+"/TempProcessing/"
 	
@@ -199,37 +206,29 @@ def initStartup():
 		seedfileName=seedfile.split('/')[-1]
 
 		# Modify name to describe new processing date
-		seedfileName = seedfileName.replace(processDate, newProcessDate)
+		seedfileName = seedfileName.replace(origProcessDate, newProcessDate)
 		
-		# Copy new version (w/ updated process date) of seed-file
-		# to the new path
-		shutil.copy2(seedfile, path+seedfileName)
+		# Copy new version (w/ updated process date) of seed-file to the new path
+		# Throw errors if all specified seed-files don't exist in source directory
+		# or if source == destination. 
+		try: 
+			shutil.copy2(seedfile, path+seedfileName)
+		except shutil.Error, msg:
+			print msg
+			print "Please ensure that source is not same as destination."
+		except IOError, msg:
+			print msg
+			print "Please ensure that all required seed-files exist in source (data/inputs/config/)."
 
 		odsFiles.append(path+seedfileName)
 
 # Back-up original seedfiles in data/inputs/config/
 # @param seedfileDirectory - Location/Directory of seedfiles in the environment.
-# @param processDate - Date suffix of seedfile names. Used in naming of backup directory.
-def backupSeedFiles(seedfileDirectory, processDate):
+# @param origProcessDate - Date suffix of seedfile names. Used in naming of backup directory.
+def backupSeedFiles(seedfileDirectory, origProcessDate):
 
-	# # Make directory (named after processDate in YYYYMMDD) if doesn't exist
-	# path=os.path.join(seedfileDirectory, processDate+"_BKP")
-	# if not os.path.exists(path):
-	# 	os.makedirs(path)
-
-	# # regexStr=r'*'+processDate
-	# # print glob.glob(seedfileDirectory+regexStr)
-
-	# # # Find and move the relevant seedfiles
-	# # for seedcsv in glob.glob(r'*'+processDate+'.csv'):
-	# # 	# Push original seedfiles into path
-	# # 	shutil.move(seedcsv, path)
-
-	# stmnt="mv "+seedfileDirectory+"*"+processDate+".csv"+" "+path
-	# subprocess.call(stmnt, shell=True)
-
-	# Make directory (named after processDate in YYYYMMDD) if doesn't exist
-	destination=os.path.join(seedfileDirectory, processDate+"_BKP")
+	# Make directory (named after origProcessDate in YYYYMMDD) if doesn't exist
+	destination=os.path.join(seedfileDirectory, origProcessDate+"_BKP")
 	if not os.path.exists(destination):
 		os.makedirs(destination)
 
@@ -238,7 +237,7 @@ def backupSeedFiles(seedfileDirectory, processDate):
 
 	# Move all relevant files (with original process-date) into backup folder
 	for f in files:
-		if f.endswith(processDate+".csv"):
+		if f.endswith(origProcessDate+".csv"):
 			try:
 				shutil.move(os.path.join(seedfileDirectory,f), destination)
 			except IOError, msg:
@@ -380,7 +379,7 @@ def getColNames(tableName):
 # DOES cka_config_data_load.ksh backup tables?
 def backup_tables_GKA():
 	# NEEDS MODIFICATION (results in error in interpreter)
-	sql_query="create table sub_bkp_"+processDate_text+" as select * from sub;create table nat_key_typ_bkp_"+processDate_text+" as select * from nat_key_typ;create table dim_bkp_"+processDate_text+" as select * from dim;create table sub_dim_nat_key_typ_"+processDate_text+" as select * from sub_dim_nat_key_typ;"
+	sql_query="create table sub_bkp_"+origProcessDate_text+" as select * from sub;create table nat_key_typ_bkp_"+origProcessDate_text+" as select * from nat_key_typ;create table dim_bkp_"+origProcessDate_text+" as select * from dim;create table sub_dim_nat_key_typ_"+origProcessDate_text+" as select * from sub_dim_nat_key_typ;"
 
 # Get column names for given table
 # Helper function for createGkaQuery
@@ -405,21 +404,26 @@ def getColNames(tableName):
 	# stdout, stderror = session.communicate()
 	return queryResult
 
-# Send GKA-files from TempProcessing/ to default storage folder.
+# Send GKA-files from TempProcessing/ to default storage folder. Delete TempProcessing/ after successful push.
 # Files are accessed by cka_config_data_load.ksh here for formulation of SQL Insert queries.
 # Throws exception if ODS seedfiles are being pushed to the wrong directory.
 # Throws exception if GKA seedfiles are being pushed to the wrong directory.
 # @param seedfileType- Option specifying which seedfiles to push ("GKA" or "ODS")
 def pushSeedData(seedfileType=None):
 
+	# Also ensures that the actual modified seed-files are being pushed.
 	if (seedfileType==None):
 		print "No seedfiles were specified."
 	elif (seedfileType=="GKA"):
 		for row in gkaFiles:
-			subprocess.call(["mv",row,GKA_INPUT_DEST])
+			if (row.endswith(newProcessDate+".csv")):
+				subprocess.call(["mv",row,GKA_INPUT_DEST])
+		subprocess.call(['rm', '-r', 'TempProcessing'])
 	elif (seedfileType=="ODS"):
-		for row in 	odsFiles:
-			subprocess.call(["mv",row,ODS_INPUT_DEST])
+		for row in odsFiles:
+			if (row.endswith(newProcessDate+".csv")):
+				subprocess.call(["mv",row,ODS_INPUT_DEST])
+		subprocess.call(['rm', '-r', 'TempProcessing'])
 
 # returns a tuple specifying values for:
 # NTZ_ODS_STG_SVR
@@ -452,29 +456,6 @@ def main():
 	# Establishes values for necessary input parameters
 	initStartup()
 
-	# Backup files
-	backupSeedFiles(ODS_INPUT_DEST, processDate)
-
-	# add_sub_data(gkaFiles[2])
-
-	add_obj_grp_data(odsFiles[2],objGrpStandardsFile)
-	add_obj_data(odsFiles[1], objStdFile)
-	add_sbj_area_data(odsFiles[5],sbjAreaStandardsFile)
-
-	# objGrpScriptPath = os.getcwd()+"/ODS/objGroupFiller.sh"
-	# # Change file permission to "Execute by Owner"
-	# make_exec(objGrpScriptPath)
-	# subprocess.call([objGrpScriptPath, SRC_CD, SRC_ID])
-
-	# Clean-up
-	# closeDeleteFiles(odsFiles)
-	# closeDeleteFiles(gkaFiles)
-	# os.rmdir(path)
-
-	# Only works in dev-environment
-	# pushSeedData("GKA")
-	pushSeedData("ODS")
-
 	paramList = (date, SRC_CD, SRC_DSC, SRC_ID, CKA_SRC_CD, CKA_SRC_ID, CLNT_CD, CLNT_DSC, CLNT_ID)
 	connectParams = inputConnectionDetails()
 
@@ -491,8 +472,27 @@ def main():
 	# Query user whether they want to add or drop data (based on given PLATFORM ID)
 	addOrDrop = raw_input("Add data (Y) or Drop data (N)? --> ")
 
-	# If adding data, 
+	# If adding data: backup original seed-files, append to new seed-files,
+	# 	push new seed-files into data/inputs/config/, run SQL scripts, and
+	# 	run tlog_config_data_load.ksh script to write to ODconfig tables
+	# Else if dropping data:
+	#	Run the data-removing SQL script.
 	if (addOrDrop == "Y"):
+		# Generate new seed-files
+		copyOrigSeedfiles()
+
+		# Backup original seed-files
+		backupSeedFiles(ODS_INPUT_DEST, origProcessDate)
+
+		# Add new records into seed-files
+		add_obj_grp_data(odsFiles[2],objGrpStandardsFile)
+		add_obj_data(odsFiles[1], objStdFile)
+		add_sbj_area_data(odsFiles[5],sbjAreaStandardsFile)
+
+		# Push seedfiles into data/inputs/config/
+		# Only works in dev-environment
+		pushSeedData("ODS")
+
 		runSqlQuery(dropRecreateParams)
 		runSqlQuery(cmd)
 		subprocess.call([odsDataLoad_script,newProcessDate])
