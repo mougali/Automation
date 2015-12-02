@@ -2,6 +2,7 @@ DECLARE
 
 	v_stmt_str VARCHAR2(1000) := 'INSERT INTO PLATFORM_STCK VALUES(:g_pID, :g_pDesc, SYSDATE, SYSDATE, NULL)';
 
+	-- Backups for config tables
 	v_stmt_create1 VARCHAR2(1000) := 'create table PLATFORM_STCK_BKP_&1 as select * from PLATFORM_STCK';
 	v_stmt_create2 VARCHAR2(1000) := 'create table PLATFORM_DTL_BKP_&1 as select * from PLATFORM_DTL';
 	v_stmt_create3 VARCHAR2(1000) := 'create table CONNECTION_DETAILS_&1 as select * from CONNECTION_DETAILS';
@@ -10,11 +11,23 @@ DECLARE
 	v_stmt_create6 VARCHAR2(1000) := 'create table SRC_BKP_&1 as select * from SRC';
 	v_stmt_create7 VARCHAR2(1000) := 'create table CLNT_BKP_&1 as select * from CLNT';
 
+	-- Backups for config tables loaded via seed-files
+	v_stmt_create8 VARCHAR2(1000) := 'CREATE TABLE PRCS_CONF_&1 AS SELECT * FROM PRCS_CONF';
+	v_stmt_create9 VARCHAR2(1000) := 'CREATE TABLE OBJ_GRP_&1 AS SELECT *  FROM OBJ_GRP';
+	v_stmt_create10 VARCHAR2(1000) := 'CREATE TABLE SBJ_AREA_&1 AS SELECT *  FROM SBJ_AREA';
+	v_stmt_create11 VARCHAR2(1000) := 'CREATE TABLE OBJ_&1 AS SELECT *  FROM OBJ';
+	v_stmt_create12 VARCHAR2(1000) := 'CREATE TABLE DIM_&1 AS SELECT *  FROM DIM';
+	v_stmt_create13 VARCHAR2(1000) := 'CREATE TABLE STD_FMT_META_DTA_&1 AS SELECT *  FROM STD_FMT_META_DTA';
+	v_stmt_create14 VARCHAR2(1000) := 'CREATE TABLE SRVC_ORCH_&1 AS SELECT *  FROM SRVC_ORCH';
+	v_stmt_create15 VARCHAR2(1000) := 'CREATE TABLE OBJ_PRCS_EXCPN_&1 AS SELECT *  FROM OBJ_PRCS_EXCPN';
+	v_stmt_create16 VARCHAR2(1000) := 'CREATE TABLE CUST_ADAPT_&1 AS SELECT *  FROM CUST_ADAPT';
+	v_stmt_create17 VARCHAR2(1000) := 'CREATE TABLE SUB_DIM_KEY_&1 AS SELECT *  FROM SUB_DIM_KEY';
+
 	var_platformID NUMBER(10, 0) := &16;
 	-- var_platformIdProp matches the data definition in the PROP_CNTN table; contains same value as var_platformID
 	var_platformIdProp NUMBER(20, 0) := &16;
 	var_connectionID NUMBER(10, 0) := &17;
-	var_platformDesc VARCHAR2(100 BYTE) := '&2';
+	var_platformDesc VARCHAR2(100 BYTE) := '&3';
 	var_srcID NUMBER(20, 0) := &4;
 	
 	-- Parameters used for SRC table
@@ -40,6 +53,7 @@ DECLARE
 
 BEGIN
 	
+	/* BEGIN config table backup */
 	EXECUTE IMMEDIATE v_stmt_create1;
 	COMMIT;
 
@@ -60,6 +74,37 @@ BEGIN
 
 	EXECUTE IMMEDIATE v_stmt_create7;
 	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create8;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create9;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create10;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create11;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create12;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create13;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create14;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create15;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create16;
+	COMMIT;
+
+	EXECUTE IMMEDIATE v_stmt_create17;
+	COMMIT;
+	/* END config table backup */
 
 	EXECUTE IMMEDIATE v_stmt_str
 		USING var_platformID, var_platformDesc;

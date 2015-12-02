@@ -212,21 +212,38 @@ def initStartup():
 # @param processDate - Date suffix of seedfile names. Used in naming of backup directory.
 def backupSeedFiles(seedfileDirectory, processDate):
 
+	# # Make directory (named after processDate in YYYYMMDD) if doesn't exist
+	# path=os.path.join(seedfileDirectory, processDate+"_BKP")
+	# if not os.path.exists(path):
+	# 	os.makedirs(path)
+
+	# # regexStr=r'*'+processDate
+	# # print glob.glob(seedfileDirectory+regexStr)
+
+	# # # Find and move the relevant seedfiles
+	# # for seedcsv in glob.glob(r'*'+processDate+'.csv'):
+	# # 	# Push original seedfiles into path
+	# # 	shutil.move(seedcsv, path)
+
+	# stmnt="mv "+seedfileDirectory+"*"+processDate+".csv"+" "+path
+	# subprocess.call(stmnt, shell=True)
+
 	# Make directory (named after processDate in YYYYMMDD) if doesn't exist
-	path=os.path.join(seedfileDirectory, processDate+"_BKP")
-	if not os.path.exists(path):
-		os.makedirs(path)
+	destination=os.path.join(seedfileDirectory, processDate+"_BKP")
+	if not os.path.exists(destination):
+		os.makedirs(destination)
 
-	# regexStr=r'*'+processDate
-	# print glob.glob(seedfileDirectory+regexStr)
+	# Get list of files in seedfileDirectory
+	files = os.listdir(seedfileDirectory)
 
-	# # Find and move the relevant seedfiles
-	# for seedcsv in glob.glob(r'*'+processDate+'.csv'):
-	# 	# Push original seedfiles into path
-	# 	shutil.move(seedcsv, path)
-
-	stmnt="mv "+seedfileDirectory+"*"+processDate+".csv"+" "+path
-	subprocess.call(stmnt, shell=True)
+	# Move all relevant files (with original process-date) into backup folder
+	for f in files:
+		if f.endswith(processDate+".csv"):
+			try:
+				shutil.move(os.path.join(seedfileDirectory,f), destination)
+			except IOError, msg:
+				print IOError
+				print msg
 
 # Be sure to delete path at the end of program processing
 def closeDeleteFiles(filesArr):
@@ -458,19 +475,6 @@ def main():
 	# pushSeedData("GKA")
 	pushSeedData("ODS")
 
-	# SRC_CD="WAL"
-	# SRC_DSC="WALMART"
-	# SRC_ID="55"
-	# CKA_SRC_CD="WAL"
-	# CKA_SRC_ID="55"
-	# CLNT_CD=SRC_CD
-	# CLNT_DSC=SRC_DSC
-	# CLNT_ID="21"
-
-	# platformID = raw_input("Please specify PLATFORM ID: ")
-	# connectionID = int(platformID)*10
-	# connectionID = str(connectionID)
-
 	paramList = (date, SRC_CD, SRC_DSC, SRC_ID, CKA_SRC_CD, CKA_SRC_ID, CLNT_CD, CLNT_DSC, CLNT_ID)
 	connectParams = inputConnectionDetails()
 
@@ -481,9 +485,13 @@ def main():
 	cmd += connectParams
 	cmd += (platformID, connectionID)
 
+	# Generate SQL command to run Drop&Recreate tables script (CIF_Seedfile_Config_load.sql)
 	dropRecreateParams = [od_connectionParam, "@"+dropRecreateTablesScript]
 
+	# Query user whether they want to add or drop data (based on given PLATFORM ID)
 	addOrDrop = raw_input("Add data (Y) or Drop data (N)? --> ")
+
+	# If adding data, 
 	if (addOrDrop == "Y"):
 		runSqlQuery(dropRecreateParams)
 		runSqlQuery(cmd)
