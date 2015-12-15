@@ -36,10 +36,8 @@ objGrpStandardsFile = os.getcwd()+"/Resources/OBJ_GRP_STANDARD.csv"
 sbjAreaStandardsFile = os.getcwd()+"/Resources/SBJ_AREA_STANDARD.csv"
 
 # Log-file paths
-datelogPath = os.path.join(os.getcwd(),"Resources","datetimelog.csv")				
-subIdResourcePath = os.path.join(os.getcwd(),"Resources","datasrc.txt")
-datelogPath_backup = ''
-subIdResourcePath_backup = ''
+datelogPath=os.path.join(os.getcwd(),'Resources/datetimelog.csv')
+subIdResourcePath=os.path.join(os.getcwd(),'Resources/datasrc.txt')
 
 # SQL scripts
 dropRecreateTablesScript = os.getcwd()+"/CIF_Seedfile_Config_load.sql"
@@ -130,12 +128,10 @@ def loadInputData(orderFormFile):
 		except IndexError, msg:
 			print msg
 			print "Please ensure order-form is completely and accurately filled."
-			resetOriginalState()
 			sys.exit(1)
 		except ValueError, msg:
 			print msg
 			print "Please ensure order-form is completely and accurately filled."
-			resetOriginalState()
 			sys.exit(1)
 
 # Make directory for temporary files
@@ -252,19 +248,6 @@ def updateDates(datetimelogFilePath, isInsert):
 		writeFile.writelines([item for item in records[:-1]])
 		writeFile.close()
 
-# Refreshes the datasrc file containing subscriber records in SRC table of ODconfig.
-# Adds currently processing subscriber to the datasrc file.
-# This file is used as a data-source in Sheet 2 of OrderFormTemplate.csv.
-# @param subLogFile - Location of file containing all existent Subscribers (SRC_DSC and SRC_ID)
-def updateOrderFormInfo(subLogFile):
-	if os.path.exists(subLogFile):
-		f = open(subLogFile, 'a')
-		writer = csv.writer(f,quoting=csv.QUOTE_NONE,lineterminator=os.linesep)
-		writer.writerow([SRC_DSC,SRC_ID])
-		f.close()
-	else:
-		raise IOError("Subscriber log-file was not found.")		
-
 # Copies original seedfiles (from /data/inputs/config/) into TempProcessing/.
 # The copied seedfiles will be appended to with new records.
 def copyOrigSeedfiles():
@@ -286,11 +269,21 @@ def copyOrigSeedfiles():
 	# Copy original file contents into temporary production/processing files.
 	# Store locations of temp-files in ods and gka lists.
 	for seedfile in odSeedfileLocations:
+		# print "---------seedfile------------"
+		# print seedfile
+		# print '\n'
 
 		seedfileName=seedfile.split('/')[-1]
 
+		# print "***********original name*********"
+		# print seedfileName
+		# print '\n'
+
 		# Modify name to describe new processing date
 		seedfileName = seedfileName.replace(origProcessDate, newProcessDate)
+
+		# print "**********seedfilename**********"
+		# print seedfileName
 		
 		# Copy new version (w/ updated process date) of seed-file to the new path
 		# Throw errors if all specified seed-files don't exist in source directory
@@ -300,13 +293,9 @@ def copyOrigSeedfiles():
 		except shutil.Error, msg:
 			print msg
 			print "Please ensure that source is not same as destination."
-			resetOriginalState()
-			sys.exit(1)
 		except IOError, msg:
 			print msg
 			print "Please ensure that all required seed-files exist in source (data/inputs/config/)."
-			resetOriginalState()
-			sys.exit(1)
 
 		odsFiles.append(path+seedfileName)
 
@@ -331,8 +320,6 @@ def backupSeedFiles(seedfileDirectory, origProcessDate):
 			except IOError, msg:
 				print IOError
 				print msg
-				resetOriginalState()
-				sys.exit(1)
 
 # Be sure to delete path at the end of program processing
 def closeDeleteFiles(filesArr):
@@ -516,103 +503,24 @@ def pushSeedData(seedfileType=None):
 				subprocess.call(["mv",row,ODS_INPUT_DEST])
 		subprocess.call(['rm', '-r', 'TempProcessing'])
 
-# Backs up logfiles (e.g. datetimelog, datasrc.txt).
-# Should be called before any modifications are made to the log-files (somewhere during start-up)
-# Prerequisite: Time variables must be set. Original logfiles must be in place.
-# Post: Backup files w/ timestamps in name created in logfile-specific BKP folder.
-# Throws IOException if one or more original logfiles were not found.
-# @param backup_dir - High-level dir in which to store backups (defaults to os.getcwd()/Resources/)
-def backupLogfiles(backup_dir=os.path.join(os.getcwd(),"Resources")):
-	
-	if os.path.exists(datelogPath) and os.path.exists(subIdResourcePath):
-		global datelogPath_backup, subIdResourcePath_backup
-		backup_dir=os.path.join(backup_dir,"LogFiles_BKP_"+origProcessDate_text)
-		if (os.path.exists(backup_dir)):
-			shutil.rmtree(backup_dir)
-		os.makedirs(backup_dir)
-
-		# Define locations of backup logfiles
-		datelogPath_backup=os.path.join(backup_dir,datelogPath.split('/')[-1])
-		subIdResourcePath_backup=os.path.join(backup_dir,subIdResourcePath.split('/')[-1])
-
-		# Create backups using shutil.copy2(src,dst)
-		shutil.copy2(datelogPath,datelogPath_backup)
-		shutil.copy2(subIdResourcePath,subIdResourcePath_backup)
-
-# Resets environment to pre-processing state.
-# Original backed-up seedfiles are sent back to GKA_INPUT_DEST. Backup folder is removed. New logfiles are removed.
-# Original backed-up logfiles are sent back to Resources/. Backup folder is removed.
-# TempProcessing/ and all sub-contents are removed.
-def resetOriginalState():
-
-	# Find and restore original seedfiles
-	hasOrigSeedfile = True
-	# Iterate through original locations tuple to determine whether 
-	# original seedfiles are / aren't in backup folder.
-	# Remove any new seedfiles that were pushed into directory.
-	for f in odSeedfileLocations:
-		if not os.path.exists(f):
-			hasOrigSeedfile = False
-		fNew = f.replace(origProcessDate,newProcessDate)
-		if os.path.exists(fNew):
-			os.remove(fNew)
-
-	backupDir = os.path.join(ODS_INPUT_DEST,origProcessDate+"_BKP")
-	if not hasOrigSeedfile:
-		# Transfer only if backup folder exists. Otherwise raise an exception.
-		if os.path.exists(backupDir):
-			try:
-				# Iterate through odsSeedfileLocations to get names and transfer back to GKA_INPUT_DEST
-				for i in odSeedfileLocations:
-					f = i.split('/')[-1]	# Get filename only
-					f = os.path.join(backupDir,f)
-					shutil.copy2(f,ODS_INPUT_DEST)
-			except shutil.Error, msg:
-				print "ERROR: " + msg
-		else:
-			raise IOException("resetOriginalState()\nERROR: Unable to find seedfile backup directory.")
-
-	print "Datelog BKP: " + datelogPath_backup
-	print "Sublog BKP: " + subIdResourcePath_backup
-
-	# Find and restore original log-files
-	# Only execute if backup files exist
-	if os.path.exists(datelogPath_backup) and os.path.exists(subIdResourcePath_backup):
-		print "ENTER LOG-FILE CONDITIONAL."
-
-		# Remove working logfiles.
-		os.remove(datelogPath)
-		os.remove(subIdResourcePath)
-
-		# Copy originals to ./Resources/
-		shutil.copy2(datelogPath_backup,datelogPath)
-		shutil.copy2(subIdResourcePath_backup,subIdResourcePath)
-
-		# Remove backup directory + contents
-		# shutil.rmtree(os.path.join(os.getcwd(),"Resources","LogFiles_BKP_"+origProcessDate_text))
-
-	# Remove TempProcessing directory if exists
-	tempPath = os.path.join(os.getcwd(),"TempProcessing")
-	if os.path.exists(tempPath):
-		shutil.rmtree(tempPath)
-
-
 # Unarchive seedfiles of given processDate from backup folder in data/inputs/config (ODS_INPUT_DEST).
 # Prerequisites: Backup folder with given processDate exists.
 # Post-requisite: All seedfiles from backup folder are pushed into data/inputs/config. Backup folder is deleted.
 # @param processDate - Date in (YYYYMMDD) which matches suffix of relevant seedfiles.
 def revertSeedData(processDate):
-	path = os.path.join(ODS_INPUT_DEST,processDate+'_BKP')
+	path = os.path.join(ODS_INPUT_DEST,processDate)
 	if os.path.isdir(path):
-		# Copy from src -> dest (backup folder --> ODS_INPUT_DEST)
+		# Push from src -> dest (backup folder --> ODS_INPUT_DEST)
 		files = os.listdir(path)
 		for f in files:
 			if f.endswith(processDate+".csv"):
 				try:
-					shutil.copy(os.path.join(path,f), ODS_INPUT_DEST)	# Move from back-up folder (path) --> data/inputs/config/
+					shutil.move(os.path.join(path,f), ODS_INPUT_DEST)	# Move from back-up folder (path) --> data/inputs/config/
 				except IOError, msg:
 					print IOError
 					print msg
+		# Remove backup directory
+		shutil.rmtree(path)
 	else:
 		raise IOError(path + " not found!")
 
@@ -637,6 +545,12 @@ def runSqlQuery(paramList):
 	params += paramList
 	session = Popen(params, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	return session.communicate()
+
+def updateSubResourceFile(subResourceFilePath):
+	f = open(subResourceFilePath, 'a')
+	writer = csv.writer(f,quoting=csv.QUOTE_NONE,lineterminator=os.linesep)
+	writer.writerow([SRC_DSC,SRC_ID])
+	f.close()
 
 # MAIN SCRIPT
 # Currently able to write out standard/default values for SUBSCRIBER, OBJECT_GROUPS, and SUBJECT_AREAS
@@ -680,14 +594,6 @@ def main():
 		# Backup original seed-files
 		backupSeedFiles(ODS_INPUT_DEST, origProcessDate)
 
-		# Backup original logfiles
-		try:
-			backupLogfiles()
-		except IOError, msg:
-			print msg
-			resetOriginalState()
-			sys.exit(1)
-
 		# Add new records into seed-files
 		add_obj_grp_data(odsFiles[2],objGrpStandardsFile)
 		add_obj_data(odsFiles[1], objStdFile)
@@ -698,23 +604,12 @@ def main():
 		# Only works in dev-environment
 		pushSeedData("ODS")
 
-		# Run SQL query to drop/recreate tables
 		runSqlQuery(dropRecreateParams)
-		
-		# Run SQL query to backup ODconfig tables and load data into config tables
 		runSqlQuery(cmd)
-
-		# Run shell-script which appends seedfile data into ODconfig tables
 		subprocess.call([odsDataLoad_script,newProcessDate])
 
 		# Update datelogfile with most recent processing date
 		updateDates(datelogPath, True)
-
-		# Update datasrc.txt with newly added SUB_ID
-		try:
-			updateOrderFormInfo(subIdResourcePath)
-		except IOError, msg:
-			print "IOERROR: " + msg
 
 	elif (addOrDrop.upper() == "N"):
 		cmd[1] = "@removeAddendums.sql"

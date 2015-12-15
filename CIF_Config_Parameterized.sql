@@ -1175,9 +1175,9 @@ BEGIN
 		USING var_srcIdSRC, var_srcCode, var_srcDsc, var_ckaSubID, var_ckaSubNm;
 	COMMIT;
 
-	v_stmt_str := q'$INSERT INTO CLNT (CLNT_ID,CLNT_CD,CLNT_DSC,CRT_DT,LST_UPD_DT,LST_UPD_USR) VALUES (:g_clntID,:g_clntCode,:g_clntDsc,SYSDATE,SYSDATE,'LCRODCONFIGQ')$';
+	v_stmt_str := q'$INSERT INTO CLNT (CLNT_ID,CLNT_CD,CLNT_DSC,CRT_DT,LST_UPD_DT,LST_UPD_USR) VALUES (seq_clnt_id.NEXTVAL,:g_clntCode,:g_clntDsc,SYSDATE,SYSDATE,'LCRODCONFIGQ')$';
 	EXECUTE IMMEDIATE v_stmt_str
-		USING var_clientID, var_clientCode, var_clientDsc;
+		USING var_clientCode, var_clientDsc;
 	COMMIT;
 
 END;

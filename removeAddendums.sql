@@ -135,8 +135,20 @@ BEGIN
 		USING var_srcID;
 	COMMIT;
 
+	/* DELETE from OBJ all appended values (based on SRC_ID) */
+	v_stmt_removeRec := q'$DELETE FROM OBJ WHERE SRC_ID = :g_srcID$';
+	EXECUTE IMMEDIATE v_stmt_removeRec
+		USING var_srcID;
+	COMMIT;
+
 	/* DELETE from SBJ_AREA all appended values (based on SRC_ID) */
 	v_stmt_removeRec := q'$DELETE FROM SBJ_AREA WHERE SRC_ID = :g_srcID$';
+	EXECUTE IMMEDIATE v_stmt_removeRec
+		USING var_srcID;
+	COMMIT;
+
+	/* DELETE from PRCS_CONF all appended values (based on SRC_ID) */
+	v_stmt_removeRec := q'$DELETE FROM PRCS_CONF WHERE SRC_ID = :g_srcID$';
 	EXECUTE IMMEDIATE v_stmt_removeRec
 		USING var_srcID;
 	COMMIT;
